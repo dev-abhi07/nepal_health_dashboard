@@ -30,18 +30,22 @@ const facilitytypemaster = sequelize.define("facilitytypemaster", {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
+    },
+    color_code:{
+        type: DataTypes.STRING(20),
+        allowNull: true
     }
 }, {
     tableName: "facilitytypemaster", // use your actual table name
     timestamps: false
 });
 
-facilitytypemaster.sync({ alter: true })
-    .then(() => {
-        console.log("FacilityType table synced successfully."); // Table created or altered successfully
-    })
-    .catch((error) => {
-        console.error("Error syncing FacilityType table:", error); // Handle any errors during the sync
-    });
+// facilitytypemaster.sync({ alter: true })
+//     .then(() => {
+//         console.log("FacilityType table synced successfully."); // Table created or altered successfully
+//     })
+//     .catch((error) => {
+//         console.error("Error syncing FacilityType table:", error); // Handle any errors during the sync
+//     });
 
 module.exports = facilitytypemaster;

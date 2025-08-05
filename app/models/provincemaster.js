@@ -17,6 +17,14 @@ const province_master = sequelize.define('provincemaster', {
         type: DataTypes.STRING(250),
         allowNull: true
     },
+    latitude:{
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
+    longitude:{
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
     createdby: {
         type: DataTypes.INTEGER,
         allowNull: false,

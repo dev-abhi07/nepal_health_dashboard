@@ -47,13 +47,13 @@ const vaccine_hmis = sequelize.define('vaccine_hmis', {
     timestamps: false
 });
 
-vaccine_hmis.sync({ alter: true })
-    .then(() => {
-        console.log("Vaccine HMIS table synced successfully."); // Table created or altered successfully
-    })
-    .catch((error) => {
-        console.error("Error syncing Vaccine HMIS table:", error); // Handle any errors during the sync
-    });
+// vaccine_hmis.sync({ alter: true })
+//     .then(() => {
+//         console.log("Vaccine HMIS table synced successfully."); // Table created or altered successfully
+//     })
+//     .catch((error) => {
+//         console.error("Error syncing Vaccine HMIS table:", error); // Handle any errors during the sync
+//     });
 module.exports = vaccine_hmis;
 
 
