@@ -42,11 +42,11 @@ const ImmunizationRecord = sequelize.define("immunization_records", {
     timestamps: false
 });
 
-ImmunizationRecord.sync({ alter: true })
-    .then(() => {
-        console.log("Immunization Records table synced successfully."); // Table created or altered successfully
-    })
-    .catch((error) => {
-        console.error("Error syncing Immunization Records table:", error); // Handle any errors during the sync
-    });
+// ImmunizationRecord.sync({ alter: true })
+//     .then(() => {
+//         console.log("Immunization Records table synced successfully."); // Table created or altered successfully
+//     })
+//     .catch((error) => {
+//         console.error("Error syncing Immunization Records table:", error); // Handle any errors during the sync
+//     });
 module.exports = ImmunizationRecord;

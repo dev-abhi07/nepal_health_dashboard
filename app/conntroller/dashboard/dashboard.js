@@ -18,6 +18,7 @@ const moment = require('moment');
 const { Op, fn, col } = require("sequelize");
 const health_worker_category = require("../../models/healthWorker");
 const VaccineProgram = require("../../models/vaccineProgram");
+const sequelize = require("../../connection/connection");
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -45,87 +46,440 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 exports.dashboard = async (req, res) => {
-
-    //get Total Provinces
-    const province_masters = await province_master.count({
-        where: {
-            isdeleted: 0
-        }
-    })
-
-
-    //get Total Districts
-    const totalDistricts = await district_master.count({
-        where: {
-            isdeleted: 0
-        }
-    })
-
-    //get Total Palikas
-    const totalPalikas = await palika_master.count({
-        where: {
-            isdeleted: 0
-        }
-    })
-
-    //get Total Wards 
-    const totalWards = await WardMaster.count({
-        where: {
-            isdeleted: 0
-        }
-    })
-
-    const demography = [{ title: 'Provinces', total_count: province_masters }, {
-        title: 'Districts',
-        total_count: totalDistricts
-    },
-    {
-        title: 'Palikas',
-        total_count: totalPalikas
-    },
-    {
-        title: 'Wards',
-        total_count: totalWards
-    }
-    ]
-
-    const facilityTypes = await facilitytypemaster.findAll({
-        where: {
-            isdeleted: 0
-        },
-        order: [['facilitytype', 'ASC']]
-    });
-
-
-    const totalFacility = await Promise.all(facilityTypes.map(async (r) => {
-
-        const facilityTypeCount = await facility.count({
+    try {
+      let province_masters = 0;
+      let totalDistricts = 0;
+      let totalPalikas = 0;
+      let totalWards = 0;
+      let totalFacility = 0;
+      let facilityTypes = [];
+      let childrenZeroTo14Years = 0;
+      let childrenZeroTo5years = 0;
+      let totalDifference = 0;
+      let populationData = {};
+      let demography = [];
+      let achievements = [];
+       if(req.body && req.body.province_id){
+           totalDistricts = await district_master.count({
             where: {
-                fk_facilitytype: r.id,
+                isdeleted: 0,
+                fk_provinceid: req.body.province_id
+            }
+          })
+
+          totalPalikas = await palika_master.count({
+            where: {
+                isdeleted: 0,
+                fk_provinceid: req.body.province_id
             }
         })
-        return {
-            value: r.id,
-            label: r.facilitytype,
-            facility_type: r.facilitytype,
-            id: r.id,
-            count: facilityTypeCount,
-            facility_image: `icons/${r.image ? r.image : null}`
+
+        totalWards = await WardMaster.count({
+            where: {
+                isdeleted: 0,
+                fk_provinceid: req.body.province_id
+            }
+        })
+
+        demography = [{ title: 'Provinces', total_count: 1 }, {
+          title: 'Districts',
+          total_count: totalDistricts
+      },
+      {
+          title: 'Palikas',
+          total_count: totalPalikas
+      },
+      {
+          title: 'Wards',
+          total_count: totalWards
+      }
+      ]
+
+      totalFacility = await Helper.getProvincesFacilityCounts(req.body.province_id)
+
+      achievements = [
+        "90% Rota Vaccine Coverage",
+        "95% Measles Vaccine Coverage",
+        "80% BCG Vaccine Coverage",
+        "98% Polio Vaccine Coverage",
+      ];
+      childrenZeroTo14Years = await sequelize.query(
+        'select sum(pop00to14years) from population_stats where province_id = :province_id',
+        {
+            type: sequelize.QueryTypes.SELECT,
+            replacements: { province_id: req.body.province_id }
         }
-    }))
-    if (!facilityTypes || facilityTypes.length === 0) {
-        return Helper.response(false, "No facility types found", {}, res, 404);
+    );
+
+    childrenZeroTo5years = await sequelize.query(
+        'select sum(pop00to59months) from population_stats where province_id = :province_id',
+        {
+            type: sequelize.QueryTypes.SELECT,
+            replacements: { province_id: req.body.province_id }
+        }
+    );
+
+    totalDifference = childrenZeroTo14Years[0].sum - childrenZeroTo5years[0].sum;
+
+    populationData = {
+
+        "title": "Total Children",
+      
+        "totalCount":childrenZeroTo14Years[0].sum,
+      
+        "progressBars": [
+      
+          {
+      
+            "label": "Upto 5 Years",
+      
+            "value": childrenZeroTo5years[0].sum,
+      
+            "color": "#dc143c",
+      
+            "class": "first"
+      
+          },
+      
+          {
+      
+            "label": "5-14 Years",
+      
+            "value": totalDifference,
+      
+            "color": "#003893",
+      
+            "class": "second"
+      
+          }
+      
+        ],
+      
+        "legends": [
+      
+          {
+      
+            "label": "Upto 5 Years " + Number(childrenZeroTo5years[0].sum).toLocaleString('en-IN'),
+      
+            "dotColor": "#dc143c"
+      
+          },
+      
+          {
+      
+            "label": "5-14 Years " + Number(totalDifference).toLocaleString('en-IN'),
+      
+            "dotColor": "#003893"
+      
+          }
+      
+        ]
+      
+      }
+
+      return Helper.response(true, "Welcome to the province Dashboard", { demography: demography,achievements: achievements,populationData,totalFacility }, res, 200);
+
+       }else if(req.body && req.body.district_id){
+       
+
+      //get Total Palikas
+      totalPalikas = await palika_master.count({
+          where: {
+              isdeleted: 0,
+              fk_districtid: req.body.district_id
+          }
+      })
+
+      //get Total Wards 
+      totalWards = await WardMaster.count({
+          where: {
+              isdeleted: 0,
+              fk_districtid: req.body.district_id
+          }
+      })
+
+      demography = [{ title: 'Provinces', total_count:1 }, {
+          title: 'Districts',
+          total_count: 1
+      },
+      {
+          title: 'Palikas',
+          total_count: totalPalikas
+      },
+      {
+          title: 'Wards',
+          total_count: totalWards
+      }
+      ]
+
+      facilityTypes = await facilitytypemaster.findAll({
+          where: {
+              isdeleted: 0
+          },
+          order: [['facilitytype', 'ASC']]
+      });
+
+
+     totalFacility = await Helper.getDistrictFacilityCounts(req.body.district_id)
+      if (!facilityTypes || facilityTypes.length === 0) {
+          return Helper.response(false, "No facility types found", {}, res, 404);
+      }
+
+      achievements = [
+    "90% Rota Vaccine Coverage",
+    "95% Measles Vaccine Coverage",
+    "80% BCG Vaccine Coverage",
+    "98% Polio Vaccine Coverage",
+  ];
+
+  childrenZeroTo14Years = await sequelize.query(
+      'select sum(pop00to14years) from population_stats where district_id = :district_id',
+      {
+          type: sequelize.QueryTypes.SELECT,
+          replacements: { district_id: req.body.district_id }
+      }
+  );
+
+  childrenZeroTo5years = await sequelize.query(
+      'select sum(pop00to59months) from population_stats where district_id = :district_id',
+      {
+          type: sequelize.QueryTypes.SELECT,
+          replacements: { district_id: req.body.district_id }
+      }
+  );
+
+  totalDifference = childrenZeroTo14Years[0].sum - childrenZeroTo5years[0].sum;
+
+  populationData = {
+
+      "title": "Total Children",
+    
+      "totalCount":childrenZeroTo14Years[0].sum,
+    
+      "progressBars": [
+    
+        {
+    
+          "label": "Upto 5 Years",
+    
+          "value": childrenZeroTo5years[0].sum,
+    
+          "color": "#dc143c",
+    
+          "class": "first"
+    
+        },
+    
+        {
+    
+          "label": "5-14 Years",
+    
+          "value": totalDifference,
+    
+          "color": "#003893",
+    
+          "class": "second"
+    
+        }
+    
+      ],
+    
+      "legends": [
+    
+        {
+    
+          "label": "Upto 5 Years " + Number(childrenZeroTo5years[0].sum).toLocaleString('en-IN'),
+    
+          "dotColor": "#dc143c"
+    
+        },
+    
+        {
+    
+          "label": "5-14 Years " + Number(totalDifference).toLocaleString('en-IN'),
+    
+          "dotColor": "#003893"
+    
+        }
+    
+      ]
+    
     }
+    
+   
 
-    const achievements = [
-  "90% Rota Vaccine Coverage",
-  "95% Measles Vaccine Coverage",
-  "80% BCG Vaccine Coverage",
-  "98% Polio Vaccine Coverage",
-];
- 
+      return Helper.response(true, "Welcome to the Dashboard", { demography: demography, totalFacility, achievements: achievements,populationData}, res, 200);
+     
+       }else if(req.body && req.body.palika_id){
+        totalFacility = await Helper.getPalikaFacilityCounts(req.body.palika_id)
+        if (!facilityTypes || facilityTypes.length === 0) {
+            return Helper.response(false, "No facility types found", {}, res, 404);
+        }
+        return Helper.response(true, "Welcome to the Dashboard", {totalFacility}, res, 200);
 
-    return Helper.response(true, "Welcome to the Dashboard", { demography: demography, totalFacility, achievements: achievements }, res, 200);
+       }
+       
+       else{
+        province_masters = await province_master.count({
+          where: {
+              isdeleted: 0
+          }
+      })
+
+
+      //get Total Districts
+      totalDistricts = await district_master.count({
+          where: {
+              isdeleted: 0
+          }
+      })
+
+      //get Total Palikas
+      totalPalikas = await palika_master.count({
+          where: {
+              isdeleted: 0
+          }
+      })
+
+      //get Total Wards 
+      totalWards = await WardMaster.count({
+          where: {
+              isdeleted: 0
+          }
+      })
+
+      demography = [{ title: 'Provinces', total_count: province_masters }, {
+          title: 'Districts',
+          total_count: totalDistricts
+      },
+      {
+          title: 'Palikas',
+          total_count: totalPalikas
+      },
+      {
+          title: 'Wards',
+          total_count: totalWards
+      }
+      ]
+
+      facilityTypes = await facilitytypemaster.findAll({
+          where: {
+              isdeleted: 0
+          },
+          order: [['facilitytype', 'ASC']]
+      });
+
+
+     totalFacility = await Promise.all(facilityTypes.map(async (r) => {
+
+          const facilityTypeCount = await facility.count({
+              where: {
+                  fk_facilitytype: r.id,
+                  isdeleted: 0
+              }
+          })
+          return {
+              value: r.id,
+              label: r.facilitytype,
+              facility_type: r.facilitytype,
+              id: r.id,
+              count: facilityTypeCount,
+              facility_image: `icons/${r.image ? r.image : null}`
+          }
+      }))
+      if (!facilityTypes || facilityTypes.length === 0) {
+          return Helper.response(false, "No facility types found", {}, res, 404);
+      }
+
+      achievements = [
+    "90% Rota Vaccine Coverage",
+    "95% Measles Vaccine Coverage",
+    "80% BCG Vaccine Coverage",
+    "98% Polio Vaccine Coverage",
+  ];
+
+  childrenZeroTo14Years = await sequelize.query(
+      'select sum(pop00to14years) from population_stats',
+      {
+          type: sequelize.QueryTypes.SELECT
+      }
+  );
+
+  childrenZeroTo5years = await sequelize.query(
+      'select sum(pop00to59months) from population_stats',
+      {
+          type: sequelize.QueryTypes.SELECT
+      }
+  );
+
+  totalDifference = childrenZeroTo14Years[0].sum - childrenZeroTo5years[0].sum;
+
+  populationData = {
+
+      "title": "Total Children",
+    
+      "totalCount":childrenZeroTo14Years[0].sum,
+    
+      "progressBars": [
+    
+        {
+    
+          "label": "Upto 5 Years",
+    
+          "value": childrenZeroTo5years[0].sum,
+    
+          "color": "#dc143c",
+    
+          "class": "first"
+    
+        },
+    
+        {
+    
+          "label": "5-14 Years",
+    
+          "value": totalDifference,
+    
+          "color": "#003893",
+    
+          "class": "second"
+    
+        }
+    
+      ],
+    
+      "legends": [
+    
+        {
+    
+          "label": "Upto 5 Years " + Number(childrenZeroTo5years[0].sum).toLocaleString('en-IN'),
+    
+          "dotColor": "#dc143c"
+    
+        },
+    
+        {
+    
+          "label": "5-14 Years " + Number(totalDifference).toLocaleString('en-IN'),
+    
+          "dotColor": "#003893"
+    
+        }
+    
+      ]
+    
+    }
+    
+   
+
+      return Helper.response(true, "Welcome to the Dashboard", { demography: demography, totalFacility, achievements: achievements,populationData }, res, 200);
+       }
+
+        
+    } catch (error) {
+        console.error("Error in dashboard:", error);
+        return Helper.response(false, "Error fetching dashboard data", {}, res, 500);
+    }
 }
 
 exports.dashboardMap = async (req, res) => {
@@ -391,79 +745,280 @@ exports.vaccineDropChart = async (req, res) => {
 
 
 
+// exports.ImmunizationRecord = async (req, res) => {
+//   try {
+//     const {vaccine} = req.body;
+
+//     // Define configuration for all programs
+//     const programConfig = {
+//       bcg: {
+//         columns: ['bcg'],
+//         label: 'BCG',
+//         type: 'trend'
+//       },
+//       opv: {
+//         opened: 'opv3',
+//         used: 'opv1',
+//         label: 'OPV',
+//         type: 'wastage'
+//       },
+//       pcv: {
+//         opened: 'pcv3',
+//         used: 'pcv1',
+//         label: 'PCV',
+//         type: 'wastage'
+//       },
+//       rota: {
+//         opened: 'rota2',
+//         used: 'rota1',
+//         label: 'Rota',
+//         type: 'wastage'
+//       },
+//       'dpt-hepb-hib': {
+//         opened: 'dpt3',
+//         used: 'dpt1',
+//         label: 'DPT-HepB-Hib',
+//         type: 'wastage'
+//       },
+//       fipv: {
+//         opened: 'fipv1',
+//         used: 'fipv3',
+//         label: 'FIPV',
+//         type: 'wastage'
+//       },
+//       je: {
+//         opened: 'je1',
+//         used: 'je2',
+//         label: 'JE',
+//         type: 'wastage'
+//       },
+//       td: {
+//         opened: 'td1',
+//         used: 'td2',
+//         label: 'TD',
+//         type: 'wastage'
+//       },
+//       tcv: {
+//         opened: 'tcv1',
+//         used: 'tcv2',
+//         label: 'TCV',
+//         type: 'wastage'
+//       },
+//       hpv: {
+//         opened: 'hpv1',
+//         used: 'hpv2',
+//         label: 'HPV',
+//         type: 'wastage'
+//       },
+//       'measles/rubella': {
+//         columns: ['mr_9_11m', 'mr_12_23m'],
+//         label: 'Measles/Rubella',
+//         type: 'trend'
+//       },
+//     };
+
+//     // Use default if no program_name
+//     const selectedProgram = vaccine ? vaccine.toLowerCase() : 'measles/rubella';
+//     const config = programConfig[selectedProgram];
+
+//     if (!config) {
+//       return Helper.response(false, `Unsupported program: ${vaccine}`, {}, res, 400);
+//     }
+
+//     // Select required columns
+//     const attributes = ['date'];
+//     if (config.type === 'wastage') {
+//       attributes.push(config.opened);
+//       if (config.used !== config.opened) {
+//         attributes.push(config.used);
+//       }
+//     } else if (config.type === 'trend') {
+//       attributes.push(...config.columns);
+//     }
+
+//     // Query database: Jan 1, 2024 to Dec 31, 2024
+//     const records = await ImmunizationRecord.findAll({
+//       attributes,
+//       where: {
+//         date: {
+//           [Op.gte]: new Date(2024, 0, 1),
+//           [Op.lte]: new Date(2024, 11, 31)
+//         }
+//       },
+//       raw: true
+//     });
+
+//     const monthlyData = {};
+//     const monthOrder = [
+//       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+//       'Jul'
+//     ];
+
+//     // Initialize monthly buckets
+//     monthOrder.forEach(month => {
+//       monthlyData[month] = {};
+//     });
+
+//     // Aggregate data
+//     records.forEach(record => {
+//       const month = moment(record.date).format('MMM');
+
+//       if (config.type === 'wastage') {
+//         const opened = Number(record[config.opened]) || 0;
+//         const used = Number(record[config.used]) || 0;
+
+//         if (!monthlyData[month].opened) monthlyData[month].opened = 0;
+//         if (!monthlyData[month].used) monthlyData[month].used = 0;
+
+//         monthlyData[month].opened += opened;
+//         monthlyData[month].used += used;
+//       } else if (config.type === 'trend') {
+//         config.columns.forEach(col => {
+//           if (!monthlyData[month][col]) monthlyData[month][col] = 0;
+//           monthlyData[month][col] += Number(record[col]) || 0;
+//         });
+//       }
+//     });
+
+//     // Build chart
+//     let immunization_record;
+
+//     if (config.type === 'wastage') {
+//     //   const wastageData = monthOrder.map(month => {
+//     //     const { opened, used } = monthlyData[month];
+//     //     if (opened <= 0) return 0;
+//     //     return parseFloat((((opened - used) / opened) * 100).toFixed(2));
+//     //   });
+
+//     const wastageData = monthOrder.map(month => {
+//                     const {opened,used} = monthlyData[month] || {};
+//                     const rate = opened > 0 ? ((opened - used) / opened) * 100 : 0;
+//                     console.log(`Month: ${month}, DPT1: ${opened}, DPT3: ${used}, Rate: ${rate}`);
+//                     return parseFloat(rate.toFixed(2));
+//                 });
+
+    
+
+//       const acceptableLimits = {
+//         Jan: 34, Feb: 40, Mar: 42, Apr: 25, May: 41,
+//         Jun: 50, Jul: 90, Aug: 90, Sep: 80, Oct: 50,
+//         Nov: 20, Dec: 10
+//       };
+//       const acceptableData = monthOrder.map(m => acceptableLimits[m] || 0);
+
+//       immunization_record = {
+//         chart: { zooming: { type: 'xy' }, height: 235 },
+//         title: { text: '', align: 'left' },
+//         subtitle: { text: `${config.label} Wastage Rate (%)`, align: 'left' },
+//         credits: { enabled: false },
+//         xAxis: [{ categories: monthOrder, crosshair: true }],
+//         yAxis: [
+//           { labels: { format: '{value}%' }, title: { text: 'Wastage Rate (%)' }, lineWidth: 2 },
+//           { title: { text: 'Acceptable (%)' }, labels: { format: '{value}%' }, opposite: true, lineWidth: 2 }
+//         ],
+//         tooltip: {
+//           shared: true,
+//           formatter() {
+//             return this.points
+//               ? this.points.map(p => `${p.series.name}: <b>${p.y}%</b>`).join('<br/>')
+//               : '';
+//           }
+//         },
+//         legend: { align: 'left', verticalAlign: 'top' },
+//         series: [
+//           { name: 'Wastage(%)', type: 'column', yAxis: 1,data:wastageData, color: '#213dad' },
+//           { name: 'Acceptable', type: 'spline',  data:acceptableData, color: '#dc143c' }
+//         ]
+//       };
+//     } else {
+//       const series = config.columns.map(col => ({
+//         name: col.replace('_', ' ').toUpperCase(),
+//         type: 'column',
+//         data: monthOrder.map(month => monthlyData[month][col] || 0)
+//       }));
+
+//       immunization_record = {
+//         chart: { zooming: { type: 'xy' }, height: 235 },
+//         title: { text: '', align: 'left' },
+//         subtitle: { text: `${config.label} Coverage Trend`, align: 'left' },
+//         credits: { enabled: false },
+//         xAxis: [{ categories: monthOrder, crosshair: true }],
+//         yAxis: { title: { text: 'Doses Administered' }, labels: { format: '{value}' } },
+//         tooltip: { shared: true },
+//         legend: { align: 'left', verticalAlign: 'top' },
+//         series
+//       };
+//     }
+
+//     return Helper.response(true, '', { immunization_record }, res, 200);
+
+//   } catch (error) {
+//     console.error("Immunization chart error:", error);
+//     return Helper.response(false, 'Server Error', {}, res, 500);
+//   }
+// };
+
+
+
+
 exports.ImmunizationRecord = async (req, res) => {
   try {
-    const {vaccine} = req.body;
+    const { vaccine } = req.body;
 
-    // Define configuration for all programs
+    // Unified config: only `columns` and `label`
     const programConfig = {
       bcg: {
         columns: ['bcg'],
-        label: 'BCG',
-        type: 'trend'
+        label: 'BCG'
       },
       opv: {
-        opened: 'opv3',
-        used: 'opv1',
-        label: 'OPV',
-        type: 'wastage'
+        columns: ['opv1', 'opv2', 'opv3'],
+        label: 'OPV'
       },
       pcv: {
-        opened: 'pcv3',
-        used: 'pcv1',
-        label: 'PCV',
-        type: 'wastage'
+        columns: ['pcv1', 'pcv2', 'pcv3'],
+        label: 'PCV'
       },
       rota: {
-        opened: 'rota2',
-        used: 'rota1',
-        label: 'Rota',
-        type: 'wastage'
+        columns: ['rota1', 'rota2'],
+        label: 'Rota'
       },
       'dpt-hepb-hib': {
-        opened: 'dpt3',
-        used: 'dpt1',
-        label: 'DPT-HepB-Hib',
-        type: 'wastage'
+        columns: ['dpt1', 'dpt2', 'dpt3'],
+        label: 'DPT-HepB-Hib'
       },
       fipv: {
-        opened: 'fipv1',
-        used: 'fipv3',
-        label: 'FIPV',
-        type: 'wastage'
+        columns: ['fipv1', 'fipv2'],
+        label: 'FIPV'
       },
       je: {
-        opened: 'je1',
-        used: 'je2',
-        label: 'JE',
-        type: 'wastage'
+        columns: ['je'],
+        label: 'JE'
       },
       td: {
-        opened: 'td1',
-        used: 'td2',
-        label: 'TD',
-        type: 'wastage'
+        columns: ['td1','td2'],
+        label: 'TD'
       },
       tcv: {
-        opened: 'tcv1',
-        used: 'tcv2',
-        label: 'TCV',
-        type: 'wastage'
+        columns: ['tcv'],
+        label: 'TCV'
       },
       hpv: {
-        opened: 'hpv1',
-        used: 'hpv2',
-        label: 'HPV',
-        type: 'wastage'
+        columns: ['hpv1', 'hpv2'],
+        label: 'HPV'
       },
       'measles/rubella': {
         columns: ['mr_9_11m', 'mr_12_23m'],
-        label: 'Measles/Rubella',
-        type: 'trend'
+        label: 'Measles/Rubella'
       },
+      'fully immunized': {
+        columns: ['fully_immunized'],
+        label: 'Fully Immunized'
+      }
+      
     };
 
-    // Use default if no program_name
+    // Use default if no vaccine
     const selectedProgram = vaccine ? vaccine.toLowerCase() : 'measles/rubella';
     const config = programConfig[selectedProgram];
 
@@ -471,19 +1026,38 @@ exports.ImmunizationRecord = async (req, res) => {
       return Helper.response(false, `Unsupported program: ${vaccine}`, {}, res, 400);
     }
 
-    // Select required columns
-    const attributes = ['date'];
-    if (config.type === 'wastage') {
-      attributes.push(config.opened);
-      if (config.used !== config.opened) {
-        attributes.push(config.used);
-      }
-    } else if (config.type === 'trend') {
-      attributes.push(...config.columns);
-    }
+    // Select only required columns
+    const attributes = ['date', ...config.columns];
 
-    // Query database: Jan 1, 2024 to Dec 31, 2024
-    const records = await ImmunizationRecord.findAll({
+    let records = []
+
+    // Query data for full year 2024
+   if(req.body && req.body.province_id){
+    records = await ImmunizationRecord.findAll({
+      attributes,
+      where: {
+        province_id:String(req.body.province_id),
+        date: {
+          [Op.gte]: new Date(2024, 0, 1),
+          [Op.lte]: new Date(2024, 11, 31)
+        }
+      },
+      raw: true
+    });
+   }else if( req.body && req.body.district_id){
+    records = await ImmunizationRecord.findAll({
+      attributes,
+      where: {
+        district_id:req.body.district_id,
+        date: {
+          [Op.gte]: new Date(2024, 0, 1),
+          [Op.lte]: new Date(2024, 11, 31)
+        }
+      },
+      raw: true
+    });
+   }else{
+    records = await ImmunizationRecord.findAll({
       attributes,
       where: {
         date: {
@@ -493,6 +1067,7 @@ exports.ImmunizationRecord = async (req, res) => {
       },
       raw: true
     });
+   }
 
     const monthlyData = {};
     const monthOrder = [
@@ -500,101 +1075,54 @@ exports.ImmunizationRecord = async (req, res) => {
       'Jul'
     ];
 
-    // Initialize monthly buckets
+    // Initialize monthly data
     monthOrder.forEach(month => {
       monthlyData[month] = {};
+      config.columns.forEach(col => {
+        monthlyData[month][col] = 0;
+      });
     });
 
-    // Aggregate data
+    // Aggregate values
     records.forEach(record => {
       const month = moment(record.date).format('MMM');
-
-      if (config.type === 'wastage') {
-        const opened = Number(record[config.opened]) || 0;
-        const used = Number(record[config.used]) || 0;
-
-        if (!monthlyData[month].opened) monthlyData[month].opened = 0;
-        if (!monthlyData[month].used) monthlyData[month].used = 0;
-
-        monthlyData[month].opened += opened;
-        monthlyData[month].used += used;
-      } else if (config.type === 'trend') {
-        config.columns.forEach(col => {
-          if (!monthlyData[month][col]) monthlyData[month][col] = 0;
-          monthlyData[month][col] += Number(record[col]) || 0;
-        });
-      }
+      config.columns.forEach(col => {
+        monthlyData[month][col] += Number(record[col]) || 0;
+      });
     });
 
-    // Build chart
-    let immunization_record;
+    const COLORS = ['#213dad', '#dc143c', '#0fac81'];
 
-    if (config.type === 'wastage') {
-    //   const wastageData = monthOrder.map(month => {
-    //     const { opened, used } = monthlyData[month];
-    //     if (opened <= 0) return 0;
-    //     return parseFloat((((opened - used) / opened) * 100).toFixed(2));
-    //   });
+    // Create series for each dose
+    const series = config.columns.map(col => ({
+      name: col.toUpperCase().replace('_', ' '), // e.g., dpt1 → DPT1
+      type: 'column',
+      data: monthOrder.map(month => monthlyData[month][col] || 0),
+      color: COLORS[config.columns.indexOf(col)]
+    }));
 
-    const wastageData = monthOrder.map(month => {
-                    const {opened,used} = monthlyData[month] || {};
-                    const rate = opened > 0 ? ((opened - used) / opened) * 100 : 0;
-                    console.log(`Month: ${month}, DPT1: ${opened}, DPT3: ${used}, Rate: ${rate}`);
-                    return parseFloat(rate.toFixed(2));
-                });
-
-    
-
-      const acceptableLimits = {
-        Jan: 34, Feb: 40, Mar: 42, Apr: 25, May: 41,
-        Jun: 50, Jul: 90, Aug: 90, Sep: 80, Oct: 50,
-        Nov: 20, Dec: 10
-      };
-      const acceptableData = monthOrder.map(m => acceptableLimits[m] || 0);
-
-      immunization_record = {
-        chart: { zooming: { type: 'xy' }, height: 235 },
-        title: { text: '', align: 'left' },
-        subtitle: { text: `${config.label} Wastage Rate (%)`, align: 'left' },
-        credits: { enabled: false },
-        xAxis: [{ categories: monthOrder, crosshair: true }],
-        yAxis: [
-          { labels: { format: '{value}%' }, title: { text: 'Wastage Rate (%)' }, lineWidth: 2 },
-          { title: { text: 'Acceptable (%)' }, labels: { format: '{value}%' }, opposite: true, lineWidth: 2 }
-        ],
-        tooltip: {
-          shared: true,
-          formatter() {
-            return this.points
-              ? this.points.map(p => `${p.series.name}: <b>${p.y}%</b>`).join('<br/>')
-              : '';
-          }
-        },
-        legend: { align: 'left', verticalAlign: 'top' },
-        series: [
-          { name: 'Wastage(%)', type: 'column', yAxis: 1,data:wastageData, color: '#213dad' },
-          { name: 'Acceptable', type: 'spline',  data:acceptableData, color: '#dc143c' }
-        ]
-      };
-    } else {
-      const series = config.columns.map(col => ({
-        name: col.replace('_', ' ').toUpperCase(),
-        type: 'column',
-        data: monthOrder.map(month => monthlyData[month][col] || 0)
-      }));
-
-      immunization_record = {
-        chart: { zooming: { type: 'xy' }, height: 235 },
-        title: { text: '', align: 'left' },
-        subtitle: { text: `${config.label} Coverage Trend`, align: 'left' },
-        credits: { enabled: false },
-        xAxis: [{ categories: monthOrder, crosshair: true }],
-        yAxis: { title: { text: 'Doses Administered' }, labels: { format: '{value}' } },
-        tooltip: { shared: true },
-        legend: { align: 'left', verticalAlign: 'top' },
-        series
-      };
-    }
+    // Build final chart
+    const immunization_record = {
+      chart: { zooming: { type: 'xy' }, height: 235 },
+      title: { text: '', align: 'left' },
+      subtitle: { text: `${config.label} Coverage Trend`, align: 'left' },
+      credits: { enabled: false },
+      xAxis: [{ categories: monthOrder, crosshair: true }],
+      yAxis: {
+        title: { text: 'Doses Administered' },
+        labels: { format: '{value}' }
+      },
+      tooltip: {
+        shared: true,
+        formatter() {
+          return this.points
+            ? this.points.map(p => `${p.series.name}: <b>${p.y}</b>`).join('<br/>')
+            : '';
+        }
+      },
+      legend: { align: 'left', verticalAlign: 'top' },
+      series
+    };
 
     return Helper.response(true, '', { immunization_record }, res, 200);
 
@@ -849,11 +1377,70 @@ exports.ImmunizationRecordByProgramName = async(req,res)=>{
 
 
 
-exports.
+exports.populationChart = async (req, res) => {
+    try{
+      let data = []
+      let childrenBelow5 = 0;
+      let WomanOfChildbearingAge = 0;
+      let adolescentGirls = 0;
+      if(req.body && req.body.province_id){
+        childrenBelow5 = await sequelize.query(
+          'select sum(pop00to59months) from population_stats where province_id = :province_id',
+          {
+              type: sequelize.QueryTypes.SELECT,
+              replacements: { province_id: req.body.province_id }
+          }
+      );
 
+      WomanOfChildbearingAge  = await sequelize.query(
+        'select sum(wra15to49years) from population_stats where province_id = :province_id',
+        {
+            type: sequelize.QueryTypes.SELECT,
+            replacements: { province_id: req.body.province_id }
+        }
+    );
 
-populationChart = async (req, res) => {
-    const population_chart = {
+    adolescentGirls  = await sequelize.query(
+      'select sum(pop10to19years) from population_stats where province_id = :province_id',
+      {
+          type: sequelize.QueryTypes.SELECT,
+          replacements: { province_id: req.body.province_id }
+      }
+  );
+      }else{
+        childrenBelow5 = await sequelize.query(
+          'select sum(pop00to59months) from population_stats',
+          {
+              type: sequelize.QueryTypes.SELECT
+          }
+      );
+      WomanOfChildbearingAge  = await sequelize.query(
+        'select sum(wra15to49years) from population_stats',
+        {
+            type: sequelize.QueryTypes.SELECT
+        }
+    );
+
+    adolescentGirls  = await sequelize.query(
+      'select sum(pop10to19years) from population_stats',
+      {
+          type: sequelize.QueryTypes.SELECT
+      }
+  );
+      }
+      
+     
+  
+    
+
+    
+  
+      data = [
+        { name: 'Children Below 5', y: parseFloat(childrenBelow5[0].sum), color: '#0fac81'},
+        { name: 'Adolescent Girls', y: parseFloat(adolescentGirls[0].sum), color: '#dc143c' },
+        { name: 'Woman of Child <br>Bearing Age', y: parseFloat(WomanOfChildbearingAge[0].sum), color: '#213dad' }
+    ]
+      const population_chart = {
         chart: {
             type: 'pie',
             height: 220
@@ -888,20 +1475,22 @@ populationChart = async (req, res) => {
             align: 'left',
             verticalAlign: 'middle',
             layout: 'vertical',
-            margin: 25
+            margin:0,
+            padding:0
         },
         series: [{
-            name: 'Population',
+            name: '',
             colorByPoint: true,
-            data: [
-                { name: 'Children Below 5', y: 55, color: '#0fac81' },
-                { name: 'Adolescent Girls', y: 25, color: '#dc143c' },
-                { name: 'Woman of Child <br>Bearing Age', y: 20, color: '#213dad' }
-            ]
+            data: data
         }]
     }
+    return Helper.response(true, 'Population chart data', { population_chart }, res, 200);
 
-    return Helper.response(true, '', { population_chart }, res, 200);
+
+    }catch(err){
+        console.error("Error fetching population chart:", err);
+        return Helper.response(false, "Error fetching population chart", {}, res, 500);
+    }
 
 }
 
@@ -1071,106 +1660,754 @@ populationChart = async (req, res) => {
 
 // }
 
+// exports.DashboardTableData = async (req, res) => {
+//     try {
+//         let provinces = []
+//         let facilityTypes = []
+//         let tableData = []
+//         let tableHead = []
+//         let typeCounts = {}
+//         let facilityTypeKeys = []
+//         let typeIdToName = {}
+//         let row = {}
+
+//         switch(req.body){
+//             case req.body.province_id:
+//                 console.log('<<<<province_id>>>>',req.body.province_id)
+//                 return
+//                 provinces = await district_master.findAll({
+//                     where: {
+//                         fk_provinceid: req.body.province_id,
+//                         isdeleted: 0
+//                     },
+//                     order: [['createddate', 'ASC']]
+//                 });
+//                 if (!provinces || provinces.length === 0) {
+//                     return Helper.response(false, "No provinces found", {}, res, 404);
+//                 }
+        
+//                 facilityTypes = await facilitytypemaster.findAll({
+//                     where: { isdeleted: 0 },
+//                     order: [['facilitytype', 'ASC']]
+//                 });
+//                 typeIdToName = {};
+//                 facilityTypes.forEach(ft => {
+//                     typeIdToName[ft.id] = ft.facilitytype;
+//                 });
+        
+//                 facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+//                 tableHead = [
+//                     { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+//                     ...facilityTypes.map(ft => ({
+//                         name: ft.facilitytype,
+//                         key: ft.facilitytype,
+//                         sortable: false,
+//                         wrap: true,
+//                         color: ft.color_code || null
+//                     })),
+//                     { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
+//                 ];
+//                 tableData = await Promise.all(provinces.map(async (province) => {
+//                     const facilities = await facility.findAll({
+//                         where: {
+//                             fk_districtid: province.districtid,
+//                             isdeleted: 0
+//                         },
+//                         attributes: ['fk_facilitytype']
+//                     });
+        
+//                     typeCounts = {};
+//                     facilities.forEach(f => {
+//                         const typeName = typeIdToName[f.fk_facilitytype];
+//                         if (typeName) {
+//                             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+//                         }
+//                     });
+        
+//                     row = {
+//                         Name: province.district,
+//                         Total: facilities.length
+//                     };
+        
+//                     facilityTypeKeys.forEach(key => {
+//                         row[key] = typeCounts[key] || 0;
+//                     });
+        
+//                     return row;
+//                 }));
+        
+//                 return Helper.response(
+//                     true,
+//                     "Provinces and facility data retrieved successfully",
+//                     {
+//                         tableData,
+//                         tableColumns: tableHead
+//                     },
+//                     res,
+//                     200
+//                 );
+        
+        
+
+//             default:
+//                 provinces = await province_master.findAll({
+//                     where: { isdeleted: 0 },
+//                     order: [['createddate', 'ASC']]
+//                 });
+        
+        
+        
+//                 if (!provinces || provinces.length === 0) {
+//                     return Helper.response(false, "No provinces found", {}, res, 404);
+//                 }
+        
+//                 facilityTypes = await facilitytypemaster.findAll({
+//                     where: { isdeleted: 0 },
+//                     order: [['facilitytype', 'ASC']]
+//                 });
+        
+//                 if (!facilityTypes || facilityTypes.length === 0) {
+//                     return Helper.response(false, "No facility types found", {}, res, 404);
+//                 }
+        
+        
+//                 typeIdToName = {};
+//                 facilityTypes.forEach(ft => {
+//                     typeIdToName[ft.id] = ft.facilitytype;
+//                 });
+        
+//                 facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+        
+        
+//                 tableHead = [
+//                     { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+//                     ...facilityTypes.map(ft => ({
+//                         name: ft.facilitytype,
+//                         key: ft.facilitytype,
+//                         sortable: false,
+//                         wrap: true,
+//                         color: ft.color_code || null
+//                     })),
+//                     { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
+//                 ];
+        
+        
+//                 tableData = await Promise.all(provinces.map(async (province) => {
+//                     const facilities = await facility.findAll({
+//                         where: {
+//                             fk_provinceid: province.provinceid,
+//                             isdeleted: 0
+//                         },
+//                         attributes: ['fk_facilitytype']
+//                     });
+        
+//                     typeCounts = {};
+//                     facilities.forEach(f => {
+//                         const typeName = typeIdToName[f.fk_facilitytype];
+//                         if (typeName) {
+//                             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+//                         }
+//                     });
+        
+//                     row = {
+//                         Name: province.province,
+//                         Total: facilities.length
+//                     };
+        
+//                     facilityTypeKeys.forEach(key => {
+//                         row[key] = typeCounts[key] || 0;
+//                     });
+        
+//                     return row;
+//                 }));
+        
+//                 return Helper.response(
+//                     true,
+//                     "Provinces and facility data retrieved successfully",
+//                     {
+//                         tableData,
+//                         tableColumns: tableHead
+//                     },
+//                     res,
+//                     200
+//                 );
+        
+
+                
+//         }
+
+       
+//     } catch (error) {
+//         console.error("DashboardTableData error:", error);
+//         return Helper.response(false, error?.message, {}, res, 500);
+//     }
+// }
+
 exports.DashboardTableData = async (req, res) => {
-    try {
-        const provinces = await province_master.findAll({
-            where: { isdeleted: 0 },
-            order: [['createddate', 'ASC']]
-        });
+  try {
+    let provinces = [];
+    let facilityTypes = [];
+    let tableData = [];
+    let tableHead = [];
+    let typeCounts = {};
+    let facilityTypeKeys = [];
+    let typeIdToName = {};
+    let row = {};
 
-        if (!provinces || provinces.length === 0) {
-            return Helper.response(false, "No provinces found", {}, res, 404);
+    if (req.body && req.body.province_id) {
+      const facilityTypes = await facilitytypemaster.findAll({
+        where: { isdeleted: 0 },
+        order: [['facilitytype', 'ASC']],
+        raw: true
+      });
+   
+      const facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+      
+   
+      // Build table header
+      const tableHead = [
+        { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+        ...facilityTypes.map(ft => ({
+          name: ft.facilitytype,
+          key: ft.facilitytype,
+          sortable: false,
+          wrap: true,
+          color: ft.color_code || null
+        })),
+        { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" }
+      ];
+
+      const query = ` SELECT 
+
+  districtmaster.districtid,
+
+  districtmaster.districtname,
+
+  COUNT(facility.id) AS total_facilities,
+
+  facility.fk_facilitytype,
+
+  facilitytypemaster.facilitytype
+
+FROM facility
+
+INNER JOIN districtmaster 
+
+  ON facility.fk_districtid = districtmaster.districtid
+
+INNER JOIN provincemaster on  provincemaster.provinceid = facility.fk_provinceid
+
+INNER JOIN facilitytypemaster ON facilitytypemaster.id = facility.fk_facilitytype
+
+WHERE provincemaster.provinceid = ${req.body.province_id} and facility.isdeleted = 0
+
+GROUP BY districtmaster.districtid, districtmaster.districtname,facility.fk_facilitytype,facilitytypemaster.facilitytype
+
+ORDER BY districtmaster.districtname;
+`
+   
+      // Call PostgreSQL function instead of writing SQL here
+      const rawData = await sequelize.query(
+        query,
+        {
+          type: sequelize.QueryTypes.SELECT,
+          replacements: { province_id: req.body.province_id },
+          // No need for raw: true — it's default
+        }
+      );
+     
+   
+      // Convert query results into your table format
+      const districtMap = {};
+   
+      rawData.forEach(row => {
+        if (!districtMap[row.districtid]) {
+          districtMap[row.districtid] = {
+            Name: row.districtname,
+            Total: 0
+          };
+          facilityTypeKeys.forEach(key => {
+            districtMap[row.districtid][key] = 0;
+          });
+        }
+   
+        districtMap[row.districtid][row.facilitytype] = parseInt(row.total_facilities, 10);
+        districtMap[row.districtid].Total += parseInt(row.total_facilities, 10);
+      });
+   
+      const tableData = Object.values(districtMap);
+   
+      return Helper.response(
+        true,
+        "District facility data retrieved successfully",
+        { tableData, tableColumns: tableHead },
+        res,
+        200
+      );
+
+
+      // provinces = await district_master.findAll({
+      //   where: {
+      //     fk_provinceid: req.body.province_id,
+      //     isdeleted: 0
+      //   },
+      //   raw:true,
+      //   order: [['createddate', 'ASC']]
+      // });
+    
+     
+
+      // if (!provinces || provinces.length === 0) {
+      //   return Helper.response(false, "No provinces found", {}, res, 404);
+      // }
+
+      // facilityTypes = await facilitytypemaster.findAll({
+      //   where: { isdeleted: 0 },
+      //   order: [['facilitytype', 'ASC']]
+      // });
+
+      // typeIdToName = {};
+      // facilityTypes.forEach(ft => {
+      //   typeIdToName[ft.id] = ft.facilitytype;
+      // });
+
+      // facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+
+      // tableHead = [
+      //   { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+      //   ...facilityTypes.map(ft => ({
+      //     name: ft.facilitytype,
+      //     key: ft.facilitytype,
+      //     sortable: false,
+      //     wrap: true,
+      //     color: ft.color_code || null
+      //   })),
+      //   { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
+      // ];
+
+      // tableData = await Promise.all(provinces.map(async (province) => {
+      //   const facilities = await facility.findAll({
+      //     where: {
+      //       fk_districtid: province.districtid,
+      //       isdeleted: 0
+      //     },
+      //     attributes: ['fk_facilitytype']
+      //   });
+
+      //   typeCounts = {};
+      //   facilities.forEach(f => {
+      //     const typeName = typeIdToName[f.fk_facilitytype];
+      //     if (typeName) {
+      //       typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+      //     }
+      //   });
+
+      //   row = {
+      //     Name: province.districtname,
+      //     Total: facilities.length,
+      //   };
+      //   facilityTypeKeys.forEach(key => {
+      //     row[key] = typeCounts[key] || 0;
+      //   });
+
+      //   return row;
+      // }));
+
+      // return Helper.response(
+      //   true,
+      //   "Provinces and facility data retrieved successfully",
+      //   {
+      //     tableData,
+      //     tableColumns: tableHead
+      //   },
+      //   res,
+      //   200
+      // );
+
+    }else if(req.body.district_id){
+      const facilityTypes = await facilitytypemaster.findAll({
+        where: { isdeleted: 0 },
+        order: [['facilitytype', 'ASC']],
+        raw: true
+      });
+
+      const facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+      const tableHead = [
+        { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+        ...facilityTypes.map(ft => ({
+          name: ft.facilitytype,
+          key: ft.facilitytype,
+          sortable: false,
+          wrap: true,
+          color: ft.color_code || null
+        })),
+        { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" }
+      ];
+
+      const query = `
+      
+SELECT 
+
+  palikamaster.id,
+
+  palikamaster.palikaname,
+
+  COUNT(facility.id) AS total_facilities,
+
+  facility.fk_facilitytype,
+
+  facilitytypemaster.facilitytype
+
+FROM facility
+
+INNER JOIN palikamaster 
+
+  ON facility.fk_palikaid = palikamaster.palikaid
+
+
+
+INNER JOIN districtmaster 
+
+  ON facility.fk_districtid = districtmaster.districtid
+
+INNER JOIN provincemaster on  provincemaster.provinceid = facility.fk_provinceid
+
+INNER JOIN facilitytypemaster ON facilitytypemaster.id = facility.fk_facilitytype
+
+WHERE districtmaster.districtid = ${req.body.district_id} and facility.isdeleted = 0
+
+GROUP BY  palikamaster.id, palikamaster.palikaname,facility.fk_facilitytype,facilitytypemaster.facilitytype
+
+ORDER BY  palikamaster.palikaname;
+
+      
+      
+      `
+      const rawData = await sequelize.query(
+        query,
+        {
+          type: sequelize.QueryTypes.SELECT,
+          replacements: { district_id: req.body.district_id },
+          // No need for raw: true — it's default
         }
 
-        const facilityTypes = await facilitytypemaster.findAll({
-            where: { isdeleted: 0 },
-            order: [['facilitytype', 'ASC']]
-        });
+      );
 
-        if (!facilityTypes || facilityTypes.length === 0) {
-            return Helper.response(false, "No facility types found", {}, res, 404);
+      const palikaMap = {};
+
+      rawData.forEach(row => {
+        if (!palikaMap[row.id]) {
+          palikaMap[row.id] = {
+            Name: row.palikaname,
+            Total: 0
+          };
+          facilityTypeKeys.forEach(key => {
+            palikaMap[row.id][key] = 0;
+          });
         }
 
+        palikaMap[row.id][row.facilitytype] = parseInt(row.total_facilities, 10);
+        palikaMap[row.id].Total += parseInt(row.total_facilities, 10);
+      });
 
-        const typeIdToName = {};
-        facilityTypes.forEach(ft => {
-            typeIdToName[ft.id] = ft.facilitytype;
-        });
+      const tableData = Object.values(palikaMap);
 
-        const facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
-
-
-        const tableHead = [
-            { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
-            ...facilityTypes.map(ft => ({
-                name: ft.facilitytype,
-                key: ft.facilitytype,
-                sortable: false,
-                wrap: true,
-                color: ft.color_code || null
-            })),
-            { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
-        ];
+      return Helper.response(
+        true,
+        "Palika facility data retrieved successfully",
+        { tableData, tableColumns: tableHead },
+        res,
+        200
+      );
 
 
-        const tableData = await Promise.all(provinces.map(async (province) => {
-            const facilities = await facility.findAll({
-                where: {
-                    fk_provinceid: province.provinceid,
-                    isdeleted: 0
-                },
-                attributes: ['fk_facilitytype']
-            });
 
-            const typeCounts = {};
-            facilities.forEach(f => {
-                const typeName = typeIdToName[f.fk_facilitytype];
-                if (typeName) {
-                    typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
-                }
-            });
-
-            const row = {
-                Name: province.province,
-                Total: facilities.length
-            };
-
-            facilityTypeKeys.forEach(key => {
-                row[key] = typeCounts[key] || 0;
-            });
-
-            return row;
-        }));
-
-        return Helper.response(
-            true,
-            "Provinces and facility data retrieved successfully",
-            {
-                tableData,
-                tableColumns: tableHead
-            },
-            res,
-            200
-        );
-
-    } catch (error) {
-        console.error("DashboardTableData error:", error);
-        return Helper.response(false, error?.message, {}, res, 500);
+        
+    }else if(req.body.palika_id){
+        
     }
-}
+    
+    else {
+      // No province_id provided in body
+
+      provinces = await province_master.findAll({
+        where: { isdeleted: 0 },
+        order: [['createddate', 'ASC']],
+      });
+
+      if (!provinces || provinces.length === 0) {
+        return Helper.response(false, "No provinces found", {}, res, 404);
+      }
+
+      facilityTypes = await facilitytypemaster.findAll({
+        where: { isdeleted: 0 },
+        order: [['facilitytype', 'ASC']]
+      });
+
+      if (!facilityTypes || facilityTypes.length === 0) {
+        return Helper.response(false, "No facility types found", {}, res, 404);
+      }
+
+      typeIdToName = {};
+      facilityTypes.forEach(ft => {
+        typeIdToName[ft.id] = ft.facilitytype;
+      });
+
+      facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+
+      tableHead = [
+        { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+        ...facilityTypes.map(ft => ({
+          name: ft.facilitytype,
+          key: ft.facilitytype,
+          sortable: false,
+          wrap: true,
+          color: ft.color_code || null
+        })),
+        { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
+      ];
+
+      tableData = await Promise.all(provinces.map(async (province) => {
+        const facilities = await facility.findAll({
+          where: {
+            fk_provinceid: province.provinceid,
+            isdeleted: 0
+          },
+          attributes: ['fk_facilitytype']
+        });
+
+        typeCounts = {};
+        facilities.forEach(f => {
+          const typeName = typeIdToName[f.fk_facilitytype];
+          if (typeName) {
+            typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+          }
+        });
+
+        row = {
+          Name: province.province,
+          Total: facilities.length,
+        };
+
+        facilityTypeKeys.forEach(key => {
+          row[key] = typeCounts[key] || 0;
+        });
+
+        return row;
+      }));
+
+      return Helper.response(
+        true,
+        "Provinces and facility data retrieved successfully",
+        {
+          tableData,
+          tableColumns: tableHead
+        },
+        res,
+        200
+      );
+    }
+  } catch (error) {
+    console.error("DashboardTableData error:", error);
+    return Helper.response(false, error?.message || "Internal Server Error", {}, res, 500);
+  }
+};
+
+// exports.DashboardTableData = async (req, res) => {
+//   try {
+//     let provinces = [];
+//     let facilityTypes = [];
+//     let tableData = [];
+//     let tableHead = [];
+//     let typeCounts = {};
+//     let facilityTypeKeys = [];
+//     let typeIdToName = {};
+//     let row = {};
+
+//     if (req.body && req.body.province_id) {
+
+
+//       provinces = await district_master.findAll({
+//         where: {
+//           fk_provinceid: req.body.province_id,
+//           isdeleted: 0
+//         },
+//         raw:true,
+//         order: [['createddate', 'ASC']]
+//       });
+     
+
+//       if (!provinces || provinces.length === 0) {
+//         return Helper.response(false, "No provinces found", {}, res, 404);
+//       }
+
+//       facilityTypes = await facilitytypemaster.findAll({
+//         where: { isdeleted: 0 },
+//         order: [['facilitytype', 'ASC']]
+//       });
+
+//       typeIdToName = {};
+//       facilityTypes.forEach(ft => {
+//         typeIdToName[ft.id] = ft.facilitytype;
+//       });
+
+//       facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+
+//       tableHead = [
+//         { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+//         ...facilityTypes.map(ft => ({
+//           name: ft.facilitytype,
+//           key: ft.facilitytype,
+//           sortable: false,
+//           wrap: true,
+//           color: ft.color_code || null
+//         })),
+//         { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
+//       ];
+
+//       tableData = await Promise.all(provinces.map(async (province) => {
+//         const facilities = await facility.findAll({
+//           where: {
+//             fk_districtid: province.districtid,
+//             isdeleted: 0
+//           },
+//           attributes: ['fk_facilitytype']
+//         });
+
+//         typeCounts = {};
+//         facilities.forEach(f => {
+//           const typeName = typeIdToName[f.fk_facilitytype];
+//           if (typeName) {
+//             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+//           }
+//         });
+
+//         row = {
+//           Name: province.districtname,
+//           Total: facilities.length,
+//         };
+//         facilityTypeKeys.forEach(key => {
+//           row[key] = typeCounts[key] || 0;
+//         });
+
+//         return row;
+//       }));
+
+//       return Helper.response(
+//         true,
+//         "Provinces and facility data retrieved successfully",
+//         {
+//           tableData,
+//           tableColumns: tableHead
+//         },
+//         res,
+//         200
+//       );
+
+//     } else {
+//       // No province_id provided in body
+
+//       provinces = await province_master.findAll({
+//         where: { isdeleted: 0 },
+//         order: [['createddate', 'ASC']],
+//       });
+
+//       if (!provinces || provinces.length === 0) {
+//         return Helper.response(false, "No provinces found", {}, res, 404);
+//       }
+
+//       facilityTypes = await facilitytypemaster.findAll({
+//         where: { isdeleted: 0 },
+//         order: [['facilitytype', 'ASC']]
+//       });
+
+//       if (!facilityTypes || facilityTypes.length === 0) {
+//         return Helper.response(false, "No facility types found", {}, res, 404);
+//       }
+
+//       typeIdToName = {};
+//       facilityTypes.forEach(ft => {
+//         typeIdToName[ft.id] = ft.facilitytype;
+//       });
+
+//       facilityTypeKeys = facilityTypes.map(ft => ft.facilitytype);
+
+//       tableHead = [
+//         { name: "Name", key: "Name", sortable: true, wrap: true, color: null },
+//         ...facilityTypes.map(ft => ({
+//           name: ft.facilitytype,
+//           key: ft.facilitytype,
+//           sortable: false,
+//           wrap: true,
+//           color: ft.color_code || null
+//         })),
+//         { name: "Total", key: "Total", sortable: true, wrap: true, color: "#636e72" },
+//       ];
+
+//       tableData = await Promise.all(provinces.map(async (province) => {
+//         const facilities = await facility.findAll({
+//           where: {
+//             fk_provinceid: province.provinceid,
+//             isdeleted: 0
+//           },
+//           attributes: ['fk_facilitytype']
+//         });
+
+//         typeCounts = {};
+//         facilities.forEach(f => {
+//           const typeName = typeIdToName[f.fk_facilitytype];
+//           if (typeName) {
+//             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+//           }
+//         });
+
+//         row = {
+//           Name: province.province,
+//           Total: facilities.length,
+//         };
+
+//         facilityTypeKeys.forEach(key => {
+//           row[key] = typeCounts[key] || 0;
+//         });
+
+//         return row;
+//       }));
+
+//       return Helper.response(
+//         true,
+//         "Provinces and facility data retrieved successfully",
+//         {
+//           tableData,
+//           tableColumns: tableHead
+//         },
+//         res,
+//         200
+//       );
+//     }
+//   } catch (error) {
+//     console.error("DashboardTableData error:", error);
+//     return Helper.response(false, error?.message || "Internal Server Error", {}, res, 500);
+//   }
+// };
+
+
+  
 
 
 exports.getHealthFacilityTypeData = async (req, res) => {
     const { id, facility_image } = req.body;
-    console.log('>>>',req.body)
 
-
+    let whereClause = {
+        fk_facilitytype: id,
+        isdeleted: 0
+    }
+    if(req.body.province_id){
+        whereClause.fk_provinceid = req.body.province_id
+    }
+    
     try {
         const facilitytypeData = await facility.findAll({
-            where: {
-                fk_facilitytype: id,
-                isdeleted: 0
-            },
+            where: whereClause,
         })
 
 
@@ -1192,7 +2429,21 @@ exports.getHealthFacilityTypeData = async (req, res) => {
 
 exports.health_worker_category = async (req, res) => {
     try {
-        const data = await Helper.getHealthWorkerCategory();
+        let data = []
+        if(req.body.province_id){
+            data = await Helper.getHealthWorkerCategoryProvince(req.body.province_id)
+        }else if(req.body.district_id){
+            data = await Helper.getHealthWorkerCategoryDistrict(req.body.district_id)
+        }else{
+            data = await Helper.getHealthWorkerCategory()
+        }
+        
+    
+        
+    
+       if(data.length === 0){
+        return Helper.response(false, "No data found", {}, res, 200);
+       }
          return Helper.response(true, "HR Data",{data}, res, 200);
      } catch (error) {
          console.error("Error fetching facility type data:", error);
@@ -1203,8 +2454,15 @@ exports.health_worker_category = async (req, res) => {
 
 exports.getfacilityByProvince = async (req, res) => {
     try {
-        const {id} = req.body;
-        const facilityData = await Helper.getFacility(id);
+        const {id,province_id} = req.body;
+        let facilityData = [];
+        if(id){
+            facilityData = await Helper.getFacility(id);
+        }
+        if(province_id){
+            facilityData = await Helper.getFacilityProvince(id,province_id);
+        }
+
 
         if (!facilityData || facilityData.length === 0) {
             return Helper.response(false, "No facility data found for the given province", {}, res,200);
@@ -1238,6 +2496,54 @@ exports.getDistricts = async (req, res) => {
     }
 }
 
+exports.getPalika = async (req, res) => {
+  try {
+      const {district_id} = req.body;
+      const filePath = path.join(__dirname, '..', '..', '..', 'geograhy', 'nepal-palika-geo.json');
+      const data = await Helper.readFile(filePath);
+      const realGeojson = data.data ? data.data : data;
+
+      const geograhy = {
+          type: realGeojson.type,
+          features: realGeojson.features.filter(f =>
+              f.properties && f.properties.dID === parseInt(district_id)
+          ),
+      };
+      return Helper.response(true, "Districts data",geograhy, res, 200);
+
+  } catch (err) {
+      console.error("Error fetching district by province:", err);
+      return Helper.response(false, "Error fetching district by province", {}, res, 500);
+  }
+}
+
+exports.getWard = async (req, res) => {
+  try {
+      const {palika_id} = req.body;
+      const filePath = path.join(__dirname, '..', '..', '..', 'geograhy', 'nepal-palika-geo.json');
+      const data = await Helper.readFile(filePath);
+      const realGeojson = data.data ? data.data : data;
+     
+      const geograhy = {
+          type: realGeojson.type,
+          features: realGeojson.features.filter(f =>
+              f.properties && f.properties.aID == palika_id
+          ),
+      };
+      return Helper.response(true, "Palika data",geograhy, res, 200);
+
+  } catch (err) {
+      console.error("Error fetching district by province:", err);
+      return Helper.response(false, "Error fetching district by province", {}, res, 500);
+  }
+}
+
+
+
+
+
+
+
 // exports.getVaccineProgramDD = async (req, res) => {
 // try{
 //     const vaccineProgramData = await VaccineProgram.findAll({
@@ -1267,7 +2573,11 @@ exports.getDistricts = async (req, res) => {
 
 exports.getVaccineProgramDD = async (req, res) => {
   try {
-    const vaccineProgramData = await VaccineProgram.findAll();
+    const vaccineProgramData = await VaccineProgram.findAll({
+        where:{
+            is_active:true
+        }
+    });
 
     if (!vaccineProgramData || vaccineProgramData.length === 0) {
       return Helper.response(false, "No vaccine program data found", [], res, 200);

@@ -44,11 +44,11 @@ const district_master = sequelize.define('districtmaster', {
 
 
 
-district_master.sync()
-    .then(() => {
-        console.log('Districtmaster table has been created or updated successfully.');
-    })
-    .catch((error) => {
-        console.error('Error creating or updating Districtmaster table:', error);
-    });
+// district_master.sync()
+//     .then(() => {
+//         console.log('Districtmaster table has been created or updated successfully.');
+//     })
+//     .catch((error) => {
+//         console.error('Error creating or updating Districtmaster table:', error);
+//     });
 module.exports = district_master;

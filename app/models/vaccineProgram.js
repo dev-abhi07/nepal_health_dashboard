@@ -34,12 +34,12 @@ const VaccineProgram = sequelize.define('vaccine_program', {
 
 })
 
-VaccineProgram.sync()
-    .then(() => {
-        console.log('Vaccine Program table has been created or updated successfully.');
-    })
-    .catch((error) => {
-        console.error('Error creating or updating Vaccine Program table:', error);
-    });
+// VaccineProgram.sync()
+//     .then(() => {
+//         console.log('Vaccine Program table has been created or updated successfully.');
+//     })
+//     .catch((error) => {
+//         console.error('Error creating or updating Vaccine Program table:', error);
+//     });
 
 module.exports = VaccineProgram

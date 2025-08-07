@@ -97,10 +97,10 @@ const admin_login = sequelize.define("adminlogin", {
 });
 
 
-admin_login.sync().then(() => {
-     console.log('AdminUser table synced successfully');
- }).catch((error) => {
-     console.error('Error syncing AdminUser table:', error);
- })
+// admin_login.sync().then(() => {
+//      console.log('AdminUser table synced successfully');
+//  }).catch((error) => {
+//      console.error('Error syncing AdminUser table:', error);
+//  })
 
 module.exports = admin_login;

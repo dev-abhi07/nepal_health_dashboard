@@ -60,11 +60,11 @@ const location_district = sequelize.define('location_district', {
     paranoid: false         // set to true if using deleted_at as soft delete
 });
 
-location_district.sync()
-    .then(() => {
-        console.log('Location District table has been created or updated successfully.');
-    })
-    .catch((error) => {
-        console.error('Error creating or updating Location District table:', error);
-    });
+// location_district.sync()
+//     .then(() => {
+//         console.log('Location District table has been created or updated successfully.');
+//     })
+//     .catch((error) => {
+//         console.error('Error creating or updating Location District table:', error);
+//     });
 module.exports = location_district;

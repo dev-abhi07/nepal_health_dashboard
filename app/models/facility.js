@@ -116,11 +116,11 @@ const facility = sequelize.define('facility', {
     timestamps: false
 });
 
-facility.sync()
-    .then(() => {
-        console.log("Facility table synced successfully.");
-    })
-    .catch((error) => {
-        console.error("Error syncing Facility table:", error);
-    });
+// facility.sync()
+//     .then(() => {
+//         console.log("Facility table synced successfully.");
+//     })
+//     .catch((error) => {
+//         console.error("Error syncing Facility table:", error);
+//     });
 module.exports = facility;

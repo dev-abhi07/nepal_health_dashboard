@@ -46,12 +46,12 @@ const health_worker_category = sequelize.define('health_worker_category', {
     timestamps: false, // Set true if using Sequelize's automatic timestamps
 });
 
-health_worker_category.sync()
-    .then(() => {
-        console.log("health_worker_category table synced successfully."); // Table created or altered successfully
-    })
-    .catch((error) => {
-        console.error("Error syncing FacilityType table:", error); // Handle any errors during the sync
-    });
+// health_worker_category.sync()
+//     .then(() => {
+//         console.log("health_worker_category table synced successfully."); // Table created or altered successfully
+//     })
+//     .catch((error) => {
+//         console.error("Error syncing FacilityType table:", error); // Handle any errors during the sync
+//     });
 
 module.exports = health_worker_category

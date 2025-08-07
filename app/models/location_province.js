@@ -59,12 +59,12 @@ const location_province = sequelize.define('location_province', {
     paranoid: false     // if you're not using soft delete
   });
 
-  location_province.sync()
-    .then(() => {
-        console.log('Location Provinces table has been created or updated successfully.');
-    })
-    .catch((error) => {
-        console.error('Error creating or updating Location Provinces table:', error);
-    });
+  // location_province.sync()
+  //   .then(() => {
+  //       console.log('Location Provinces table has been created or updated successfully.');
+  //   })
+  //   .catch((error) => {
+  //       console.error('Error creating or updating Location Provinces table:', error);
+  //   });
 
   module.exports = location_province;
