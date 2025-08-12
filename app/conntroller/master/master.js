@@ -44,11 +44,14 @@ exports.district = async (req, res) => {
         if (!district || district.length === 0) {
             return Helper.response(false, "No provinces found", {}, res, 404);
         }
-        const data = await Promise.all(district.map((r) => {
+        const data = await Promise.all(district.map(async (r) => {
+            const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
+            console.log(province, "f")
             return {
                 districtid: r.districtid,
                 fk_provinceid: r.fk_provinceid,
                 district_name: r.districtname,
+                province_name: province.province,
                 value: r.districtid,
                 label: r.districtname
 
@@ -72,11 +75,16 @@ exports.palikaList = async (req, res) => {
         if (!district || district.length === 0) {
             return Helper.response(false, "No palika found", {}, res, 404);
         }
-        const data = await Promise.all(district.map((r) => {
+        const data = await Promise.all(district.map(async (r) => {
+
+            const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
+            const district = await district_master.findOne({ where: { districtid: r.fk_districtid } })
             return {
                 districtid: r.fk_districtid,
                 fk_provinceid: r.fk_provinceid,
                 palika_name: r.palikaname.trim(" "),
+                province_name: province?.province,
+                district_name: district.districtname,
                 value: r.id,
                 label: r.palikaname.trim(" ")
 
@@ -93,7 +101,7 @@ exports.palikaList = async (req, res) => {
 exports.wards = async (req, res) => {
     try {
         const page = parseInt(req.body.page) || 1;
-        const limit = parseInt(req.body.limit) || 10;
+        const limit = parseInt(req.body.limit) || 50;
         const offset = (page - 1) * limit;
 
         const { count, rows } = await WardMaster.findAndCountAll({
@@ -107,14 +115,31 @@ exports.wards = async (req, res) => {
             return Helper.response(false, "No ward found", {}, res, 404);
         }
 
-        const data = rows.map((r) => ({
-            districtid: r.fk_districtid,
-            fk_provinceid: r.fk_provinceid,
-            fk_palikaid: r.fk_palikaid,
-            ward_name: r.wardname.trim(),
-            value: r.id,
-            label: r.wardname.trim()
-        }));
+        const data = await Promise.all(rows.map(async (r) => {
+            console.log(r)
+            const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
+            const district = await district_master.findOne({ where: { districtid: r.fk_districtid } })
+            const palika = await palika_master.findOne({ where: { palikaid: r.fk_palikaid } })
+            return {
+                districtid: r.fk_districtid,
+                fk_provinceid: r.fk_provinceid,
+                province_name: province?.province,
+                district_name: district.districtname,
+                palika_name: palika?.palikaname,
+                fk_palikaid: r.fk_palikaid,
+                ward_name: `Ward ${r.wardname.trim()}`,
+                value: r.id,
+                label: r.wardname.trim()
+            }
+        }))
+        // const data = await Promise.all(rows.map(async(r) => ({
+        // districtid: r.fk_districtid,
+        // fk_provinceid: r.fk_provinceid,
+        // fk_palikaid: r.fk_palikaid,
+        // ward_name: `Ward ${r.wardname.trim()}`,
+        // value: r.id,
+        // label: r.wardname.trim()
+        // })));
 
         return Helper.response(true, "Ward fetched successfully", {
             data,
