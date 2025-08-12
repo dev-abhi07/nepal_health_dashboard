@@ -10,113 +10,113 @@ const facilitytypemaster = require("../../models/facilitytypemaster");
 
 
 exports.getProvincesFacilityCounts = async (req, res) => {
-    try {
-        const provinceId = req.body.province_id
+  try {
+    const provinceId = req.body.province_id
 
-        const totalFacility = await sequelize.query(
-            'SELECT * FROM get_facility_counts_by_province(:provinceId)',
-            {
-                replacements: { provinceId },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
-        const achievements = ['90% Rota Vaccine Coverage','80% BCG Vaccine Coverage','90% Rota Vaccine Coverage']
-        return Helper.response(true, "Facility counts retrieved successfully", {totalFacility,achievements}, res, 200);
-    } catch (error) {
-        console.error("Error fetching facility counts:", error);
-        return Helper.response(false, error.message, {}, res, 500);
-    }
+    const totalFacility = await sequelize.query(
+      'SELECT * FROM get_facility_counts_by_province(:provinceId)',
+      {
+        replacements: { provinceId },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+    const achievements = ['90% Rota Vaccine Coverage', '80% BCG Vaccine Coverage', '90% Rota Vaccine Coverage']
+    return Helper.response(true, "Facility counts retrieved successfully", { totalFacility, achievements }, res, 200);
+  } catch (error) {
+    console.error("Error fetching facility counts:", error);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
 };
 
-exports.totalpopulation = async(req,res)=>{
-    try{
-        const childrenZeroTo14Years = await sequelize.query(
-            'select sum(pop00to14years) from population_stats',
-            {
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+exports.totalpopulation = async (req, res) => {
+  try {
+    const childrenZeroTo14Years = await sequelize.query(
+      'select sum(pop00to14years) from population_stats',
+      {
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-        const childrenZeroTo5years = await sequelize.query(
-            'select sum(pop00to59months) from population_stats',
-            {
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+    const childrenZeroTo5years = await sequelize.query(
+      'select sum(pop00to59months) from population_stats',
+      {
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-        const totalDifference = childrenZeroTo14Years[0].sum - childrenZeroTo5years[0].sum;
+    const totalDifference = childrenZeroTo14Years[0].sum - childrenZeroTo5years[0].sum;
 
-        const responnseData = {
+    const responnseData = {
 
-            "title": "Total Children",
-          
-            "totalCount": childrenZeroTo14Years[0].sum,
-          
-            "progressBars": [
-          
-              {
-          
-                "label": "Upto 5 Years",
-          
-                "value": childrenZeroTo5years[0].sum,
-          
-                "color": "#dc143c",
-          
-                "class": "first"
-          
-              },
-          
-              {
-          
-                "label": "5-14 Years",
-          
-                "value": totalDifference,
-          
-                "color": "#003893",
-          
-                "class": "second"
-          
-              }
-          
-            ],
-          
-            "legends": [
-          
-              {
-          
-                "label": "Upto 5 Years " + childrenZeroTo5years[0].sum,
-          
-                "dotColor": "#dc143c"
-          
-              },
-          
-              {
-          
-                "label": "5-14 Years " + totalDifference,
-          
-                "dotColor": "#003893"
-          
-              }
-          
-            ]
-          
-          }
-          
-           
+      "title": "Total Children",
 
-       return Helper.response(true, "Total population retrieved successfully", {responnseData}, res, 200);
+      "totalCount": childrenZeroTo14Years[0].sum,
 
-    }catch(err){
-        console.error("Error fetching total population:", err);
-        return Helper.response(false, err.message, {}, res, 500);
+      "progressBars": [
+
+        {
+
+          "label": "Upto 5 Years",
+
+          "value": childrenZeroTo5years[0].sum,
+
+          "color": "#dc143c",
+
+          "class": "first"
+
+        },
+
+        {
+
+          "label": "5-14 Years",
+
+          "value": totalDifference,
+
+          "color": "#003893",
+
+          "class": "second"
+
+        }
+
+      ],
+
+      "legends": [
+
+        {
+
+          "label": "Upto 5 Years " + childrenZeroTo5years[0].sum,
+
+          "dotColor": "#dc143c"
+
+        },
+
+        {
+
+          "label": "5-14 Years " + totalDifference,
+
+          "dotColor": "#003893"
+
+        }
+
+      ]
+
     }
+
+
+
+    return Helper.response(true, "Total population retrieved successfully", { responnseData }, res, 200);
+
+  } catch (err) {
+    console.error("Error fetching total population:", err);
+    return Helper.response(false, err.message, {}, res, 500);
+  }
 }
 
 // exports.facilityDetails = async (req, res) => {
 //   try {
 //     const { facility_type, palikaid } = req.body;
-    
-   
+
+
 //     const whereClause = `
 //   WHERE f.fk_facilitytype = ${facility_type}
 //     AND f.fk_palikaid = ${palikaid}
@@ -168,11 +168,11 @@ exports.totalpopulation = async(req,res)=>{
 // //       whereClause += ' AND f.fk_palikaid = :palika_id';
 // //       replacements.palika_id = palika_id;
 // //     }
-    
+
 
 // //     // Log the query with actual replacements
 // //     const rawQuery = `
-      
+
 // //   SELECT 
 // //   fa.facilitytype as facility_type,
 // //   fa.image,
@@ -211,24 +211,24 @@ exports.totalpopulation = async(req,res)=>{
 
 
 exports.facilityDetails = async (req, res) => {
-  try{
+  try {
     const whereClause = {
-      where:{
+      where: {
         fk_facilitytype: req.body?.facility_id,
-        isdeleted: 0 
+        isdeleted: 0
       },
-      
+
     }
-    if(req.body?.district_id){
+    if (req.body?.district_id) {
       whereClause.where.fk_districtid = req.body.district_id
     }
-    if(req.body?.province_id){
+    if (req.body?.province_id) {
       whereClause.where.fk_provinceid = req.body.province_id
     }
-    if(req.body?.palika_id){
+    if (req.body?.palika_id) {
       whereClause.where.fk_palikaid = req.body.palika_id
     }
-    if(req.body?.ward_id){
+    if (req.body?.ward_id) {
       whereClause.where.fk_wardid = req.body.ward_id
     }
     const facilityDetails = await facility.findAll(whereClause)
@@ -266,8 +266,8 @@ exports.facilityDetails = async (req, res) => {
       where: {
         id: { [Op.in]: facilityTypeIds }
       },
-      attributes: ['id', 'facilitytype','image','color_code']
-    })    
+      attributes: ['id', 'facilitytype', 'image', 'color_code']
+    })
 
     const districtMap = {}
     const provinceMap = {}
@@ -295,15 +295,24 @@ exports.facilityDetails = async (req, res) => {
       }
     })
 
-  
 
 
-  
 
-    const responseData = facilityDetails.map((item) => {
+
+
+    const responseData = await Promise.all(facilityDetails.map(async (item) => {
+      const [result] = await sequelize.query(
+        'SELECT facilitycode FROM facilitycodemaster WHERE id = :id',
+        {
+          replacements: { id: item.fk_facilitycode },
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+
+      console.log(result);
       return {
         facility_name: item.facilityname,
-        facility_code: item.fk_facilitycode,
+        facility_code: result.facilitycode,
         services: item.services,
         district_name: districtMap[item.fk_districtid],
         province_name: provinceMap[item.fk_provinceid],
@@ -313,20 +322,20 @@ exports.facilityDetails = async (req, res) => {
         facility_type_image: facilityTypeMap[item.fk_facilitytype]?.image,
         color_code: facilityTypeMap[item.fk_facilitytype]?.color_code,
       }
-    })
+    }))
 
 
     return Helper.response(true, "Facility details fetched", responseData, res, 200);
-  
-      
-  }catch(err){
+
+
+  } catch (err) {
     console.error("Error fetching facility details:", err);
     return Helper.response(false, err.message, {}, res, 500);
   }
 }
 
 exports.facilityAuthorityDD = async (req, res) => {
-  try{
+  try {
     const query = `
 SELECT DISTINCT f."authoritylevel"
 FROM facility AS f
@@ -334,23 +343,46 @@ WHERE f."authoritylevel" IS NOT NULL
   AND f."authoritylevel" <> '0'
   AND TRIM(f."authoritylevel") <> '';`
 
-const results = await sequelize.query(query, {
-  type: sequelize.QueryTypes.SELECT
-});
+    const results = await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT
+    });
 
-const data  = results.map(item=>(
-  {
-    value: item.authoritylevel,
-    label: item.authoritylevel
-  }
-))
+    const data = results.map(item => (
+      {
+        value: item.authoritylevel,
+        label: item.authoritylevel
+      }
+    ))
 
-return Helper.response(true, "Facility authority level fetched",{authorityLevel:data}, res, 200);
+    return Helper.response(true, "Facility authority level fetched", { authorityLevel: data }, res, 200);
 
-  }catch(err){
+  } catch (err) {
     console.error("Error fetching facility authority level:", err);
-    return Helper.response(false, err.message, {}, res, 500);
+    return Helper.response(false, error.message, {}, res, 500);
   }
 }
-  
+
+exports.getFacilityDetails = async (req, res) => {
+  try {
+    const { facility_code } = req.body;
+    const [facilities] = await sequelize.query(`
+  SELECT fc.*,dm.districtname as district_name,pm.province,plm.palikaname,CONCAT('Ward ', wm.wardname) as wardname,CONCAT(pm.province,' , ',dm.districtname, ' , ', plm.palikaname, ', Ward ',wm.wardname) AS full_location FROM facility fc
+JOIN facilitycodemaster fcm on fc.fk_facilitycode = fcm.id
+JOIN districtmaster dm on dm.districtid = fc.fk_districtid
+JOIN provincemaster pm on pm.provinceid = fc.fk_provinceid
+JOIN palikamaster plm on plm.palikaid = fc.fk_palikaid
+JOIN wardmaster wm on wm.wardid = fc.fk_wardid
+where fcm.facilitycode = :code
+`, {
+      replacements: { code: facility_code },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return Helper.response(true, "Facility Details", { facilities }, res, 200);
+  } catch (error) {
+    console.error("Error fetching facility authority level:", err);
+    return Helper.response(false, error.message, {}, res, 500);
+  }
+}
+
 

@@ -2254,6 +2254,8 @@ exports.health_worker_category = async (req, res) => {
         title: cat.title,
         icon: cat.icon,
         count: result[idx][0]?.count ?? 0,
+        province_id: req.body.province_id,
+        cat_id: cat.id
       }));
     } else if (req.body.district_id) {
       const result = await Promise.all(
@@ -2263,6 +2265,8 @@ exports.health_worker_category = async (req, res) => {
         title: cat.title,
         icon: cat.icon,
         count: result[idx][0]?.count ?? 0,
+        district_id: req.body.district_id,
+        cat_id: cat.id
       }));
     } else if (req.body.palika_id) {
       const result = await Promise.all(
@@ -2272,6 +2276,8 @@ exports.health_worker_category = async (req, res) => {
         title: cat.title,
         icon: cat.icon,
         count: result[idx][0]?.count ?? 0,
+        palika_id:req.body.palika_id,
+        cat_id:cat.id
       }));
     } else {
       data = await Helper.getHealthWorkerCategory()
@@ -2459,18 +2465,35 @@ exports.getVaccineProgramDD = async (req, res) => {
 
 exports.health_workerdata_by_cat = async (req, res) => {
   try {
-    const emp_worker_data = await sequelize.query(`
+
+    let data;
+    let emp_worker_data
+    if (req.body.province_id && req.body.cat_id) {
+      emp_worker_data = await sequelize.query(`
+  SELECT hwd.name as emp_name,hwd.gender,hwd.group,hwd.post,hwd.qualification,hwc.name,dm.districtname FROM districtmaster dm
+JOIN location_district ld on ld.code = dm.districtid::text 
+JOIN health_worker_data hwd on hwd.employee_district_id = ld.id
+JOIN health_worker_category hwc on hwd.category_id = hwc.id
+JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
+WHERE dm.fk_provinceid = :province_id and hwc.id = :cat
+
+`, {
+        replacements: { province_id: req.body.province_id, cat: req.body.cat_id },
+        type: sequelize.QueryTypes.SELECT
+      });
+    } else {
+      emp_worker_data = await sequelize.query(`
   SELECT hwd.name as emp_name,hwd.gender,hwd.group,hwd.post,hwd.qualification,hwc.name,dm.districtname FROM health_worker_data hwd
 JOIN location_district ld on hwd.employee_district_id =  ld.id
 JOIN districtmaster dm on ld.code = dm.districtid::text
 JOIN health_worker_category hwc on hwc.id = hwd.category_id
 where hwd.category_id = :cat
 `, {
-      replacements: { cat: req.body.cat_id },
-      type: sequelize.QueryTypes.SELECT
-    });
-
-    const data = emp_worker_data.map((r) => {
+        replacements: { cat: req.body.cat_id },
+        type: sequelize.QueryTypes.SELECT
+      });
+    }
+    data = emp_worker_data.map((r) => {
       return {
         emp_name: 'xxxxxxxx',
         gender: r.gender,
@@ -2482,7 +2505,6 @@ where hwd.category_id = :cat
       }
     });
     return Helper.response(true, "Health worker data", data, res, 200);
-
   } catch (error) {
 
   }

@@ -318,17 +318,14 @@ ORDER BY hwc.id;
 Helper.getHealthWorkerCategoryProvince = async (province_id, category_id) => {
     try {
         const query = `
-      SELECT 
-    b.name AS title,
-    b.icon,
-    COUNT(a.category_id) AS count
-FROM "health_worker_data" AS a
-JOIN "health_worker_category" AS b 
-    ON a.category_id = b.id
-JOIN districtmaster AS c 
-    ON a.employee_district_id = c.id and b.id = :category_id
-WHERE c.fk_provinceid = :province_id
-GROUP BY b.name, b.icon;
+      SELECT hwc.name as title,hwc.icon,COUNT(hwd.category_id) as count,hwd.category_id as cat_id FROM districtmaster dm
+JOIN location_district ld on ld.code = dm.districtid::text 
+JOIN health_worker_data hwd on hwd.employee_district_id = ld.id
+JOIN health_worker_category hwc on hwd.category_id = hwc.id
+JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
+WHERE dm.fk_provinceid = :province_id and hwc.id = :category_id
+GROUP BY hwc.name,hwc.icon,cat_id
+ORDER BY title;
     `;
 
         const result = await db.query(query, {
@@ -345,17 +342,14 @@ GROUP BY b.name, b.icon;
 Helper.getHealthWorkerCategoryDistrict = async (district_id, category_id) => {
     try {
         const query = `
-      SELECT 
-    b.name AS title,
-    b.icon,
-    COUNT(a.category_id) AS count
-FROM "health_worker_data" AS a
-JOIN "health_worker_category" AS b 
-    ON a.category_id = b.id
-JOIN districtmaster AS c 
-    ON a.employee_district_id = c.id 
-WHERE c.districtid = :district_id and b.id = :category_id
-GROUP BY b.name, b.icon;
+     SELECT hwc.name as title,hwc.icon,COUNT(hwd.category_id) as count,hwd.category_id as cat_id FROM districtmaster dm
+JOIN location_district ld on ld.code = dm.districtid::text 
+JOIN health_worker_data hwd on hwd.employee_district_id = ld.id
+JOIN health_worker_category hwc on hwd.category_id = hwc.id
+JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
+WHERE dm.districtid =:district_id and hwc.id = :category_id
+GROUP BY hwc.name,hwc.icon,cat_id
+ORDER BY title;
     `;
 
         const result = await db.query(query, {
@@ -372,17 +366,16 @@ GROUP BY b.name, b.icon;
 Helper.getHealthWorkerCategoryPalika = async (palika_id, category_id) => {
     try {
         const query = `
-      SELECT 
-    b.name AS title,
-    b.icon,
-    COUNT(a.category_id) AS count
-FROM "health_worker_data" AS a
-JOIN "health_worker_category" AS b 
-    ON a.category_id = b.id
-JOIN palikamaster AS c 
-    ON a.employee_municipality_id = c.palikaid  
-WHERE c.palikaid = :palika_id and b.id = :category_id
-GROUP BY b.name, b.icon;
+     SELECT hwc.name as title,hwc.icon,COUNT(hwd.category_id) as count,hwd.category_id as cat_id FROM districtmaster dm
+JOIN location_district ld on ld.code = dm.districtid::text 
+JOIN health_worker_data hwd on hwd.employee_district_id = ld.id
+JOIN health_worker_category hwc on hwd.category_id = hwc.id
+JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
+JOIN location_municipality lm on lm.id = hwd.employee_municipality_id
+JOIN palikamaster pms on lm.code = pms.palikaid::text
+WHERE hwc.id = :category_id and pms.palikaid = :palika_id
+GROUP BY hwc.name,hwc.icon,cat_id
+ORDER BY title;
     `;
 
         const result = await db.query(query, {
