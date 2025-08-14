@@ -95,11 +95,11 @@ const facility = sequelize.define('facility', {
         allowNull: true
     },
     latitude: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         allowNull: true
     },
     longitude: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         allowNull: true
     },
     createddate: {
@@ -116,7 +116,7 @@ const facility = sequelize.define('facility', {
     timestamps: false
 });
 
-// facility.sync()
+// facility.sync({alter:true})
 //     .then(() => {
 //         console.log("Facility table synced successfully.");
 //     })

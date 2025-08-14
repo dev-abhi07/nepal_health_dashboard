@@ -72,7 +72,7 @@ Helper.getProvincesFacilityCounts = async (province_id) => {
     FROM facility AS a
     JOIN facilitytypemaster AS b 
         ON a.fk_facilitytype = b.id
-    WHERE a.fk_provinceid = :province_id and a.isdeleted = 0
+    WHERE a.fk_provinceid = :province_id and b.isdeleted = 0
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
@@ -103,7 +103,7 @@ Helper.getProvincesFacilityCountsAuthorityLevel = async (province_id, authority_
     FROM facility AS a
     JOIN facilitytypemaster AS b 
         ON a.fk_facilitytype = b.id
-    WHERE a.fk_provinceid = :province_id and a.isdeleted = 0 and a.authoritylevel = :authority_level
+    WHERE a.fk_provinceid = :province_id and b.isdeleted = 0 and a.authoritylevel = :authority_level
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
@@ -136,7 +136,7 @@ Helper.getDistrictFacilityCounts = async (district_id) => {
     FROM facility AS a
     JOIN facilitytypemaster AS b 
         ON a.fk_facilitytype = b.id
-    WHERE a.fk_districtid = :district_id and a.isdeleted = 0
+    WHERE a.fk_districtid = :district_id and b.isdeleted = 0
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
@@ -167,7 +167,7 @@ Helper.getDistrictFacilityCountsAuthorityLevel = async (district_id, authority_l
     FROM facility AS a
     JOIN facilitytypemaster AS b 
         ON a.fk_facilitytype = b.id
-    WHERE a.fk_districtid = :district_id and a.isdeleted = 0 and a.authoritylevel = :authority_level
+    WHERE a.fk_districtid = :district_id and b.isdeleted = 0 and a.authoritylevel = :authority_level
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
@@ -199,7 +199,7 @@ Helper.getPalikaFacilityCounts = async (palika_id) => {
     FROM facility AS a
     JOIN facilitytypemaster AS b 
         ON a.fk_facilitytype = b.id
-    WHERE a.fk_palikaid = :palika_id and a.isdeleted = 0 
+    WHERE a.fk_palikaid = :palika_id and b.isdeleted = 0 
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
@@ -231,7 +231,7 @@ Helper.getPalikaFacilityCountsAuthorityLevel = async (palika_id, authority_level
     FROM facility AS a
     JOIN facilitytypemaster AS b 
         ON a.fk_facilitytype = b.id
-    WHERE a.fk_palikaid = :palika_id and a.isdeleted = 0 and a.authoritylevel = :authority_level
+    WHERE a.fk_palikaid = :palika_id and b.isdeleted = 0 and a.authoritylevel = :authority_level
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
@@ -354,7 +354,8 @@ ORDER BY title;
 
         const result = await db.query(query, {
             replacements: { district_id, category_id },
-            type: db.QueryTypes.SELECT
+            type: db.QueryTypes.SELECT,
+            logging:console.log
         });
         return result;
     } catch (error) {
@@ -380,7 +381,8 @@ ORDER BY title;
 
         const result = await db.query(query, {
             replacements: { palika_id, category_id },
-            type: db.QueryTypes.SELECT
+            type: db.QueryTypes.SELECT,
+            
         });
         return result;
     } catch (error) {
@@ -403,7 +405,7 @@ Helper.readFile = async (filePath) => {
 Helper.getFacilityTypeProvince = async (province_id) => {
     try {
         const query = `
-        select b.id,b.facilitytype as facility_type,b.id as value,b.facilitytype as label,count(a.fk_facilitytype),b.image as facility_image from facility as a join facilitytypemaster as b on a.fk_facilitytype = b.id where a.fk_provinceid = :province_id
+        select b.id,b.facilitytype as facility_type,b.id as value,b.facilitytype as label,count(a.fk_facilitytype),b.image as facility_image from facility as a join facilitytypemaster as b on a.fk_facilitytype = b.id where b.isdeleted = 0 and a.fk_provinceid = :province_id
 group by b.facilitytype,b.id,b.image
         `
 

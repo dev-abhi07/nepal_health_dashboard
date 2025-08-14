@@ -18,7 +18,7 @@ const sequelize = new Sequelize({
     database: process.env.DB_DATABASE,
     port: process.env.DB_PORT,
     schema: process.env.DB_SCHEMA,
-    logging: false,
+    logging: true,
 })
 sequelize.authenticate().then(() => {
     console.log('connected');

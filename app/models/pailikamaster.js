@@ -22,7 +22,7 @@ const palika_master = sequelize.define('palikamaster', {
         type: DataTypes.STRING(250),
         allowNull: true
     },
-    createdby: {
+    created_by: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0

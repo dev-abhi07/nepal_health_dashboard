@@ -42,6 +42,21 @@ const vaccine_hmis = sequelize.define('vaccine_hmis', {
     pct_clinics_conducted: DataTypes.FLOAT,
     pct_serious_aefi: DataTypes.FLOAT,
     month: DataTypes.STRING(50),
+    district_id:{
+        type:DataTypes.INTEGER,
+        allowNull:true,
+        defaultValue:0
+    },
+    palika_id:{
+        type:DataTypes.INTEGER,
+        allowNull:true,
+        defaultValue:0
+    },
+    province_id:{
+        type:DataTypes.INTEGER,
+        allowNull:true,
+        defaultValue:0
+    }
 }, {
     tableName: 'vaccine_hmis', // use your actual table name
     timestamps: false

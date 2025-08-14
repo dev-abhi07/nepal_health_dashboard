@@ -364,24 +364,100 @@ WHERE f."authoritylevel" IS NOT NULL
 
 exports.getFacilityDetails = async (req, res) => {
   try {
-    const { facility_code } = req.body;
-    const [facilities] = await sequelize.query(`
-  SELECT fc.*,dm.districtname as district_name,pm.province,plm.palikaname,CONCAT('Ward ', wm.wardname) as wardname,CONCAT(pm.province,' , ',dm.districtname, ' , ', plm.palikaname, ', Ward ',wm.wardname) AS full_location FROM facility fc
-JOIN facilitycodemaster fcm on fc.fk_facilitycode = fcm.id
-JOIN districtmaster dm on dm.districtid = fc.fk_districtid
-JOIN provincemaster pm on pm.provinceid = fc.fk_provinceid
-JOIN palikamaster plm on plm.palikaid = fc.fk_palikaid
-JOIN wardmaster wm on wm.wardid = fc.fk_wardid
-where fcm.facilitycode = :code
+    let facilities
+    if (req.body.facility_code) {
+      [facilities] = await sequelize.query(`
+SELECT fc.*,ftm.facilitytype
+  FROM facility fc
+  JOIN facilitycodemaster fcm ON fc.fk_facilitycode = fcm.id
+   JOIN facilitytypemaster ftm on ftm.id = fc.fk_facilitytype
+  WHERE fcm.facilitycode = :code
 `, {
-      replacements: { code: facility_code },
-      type: sequelize.QueryTypes.SELECT
-    });
+        replacements: { code: req.body.facility_code },
+        type: sequelize.QueryTypes.SELECT
+      });
+    } else {
+      [facilities] = await sequelize.query(`
+SELECT fc.*,fcm.facilitycode,ftm.facilitytype
+  FROM facility fc
+  JOIN facilitycodemaster fcm ON fc.fk_facilitycode = fcm.id
+   JOIN facilitytypemaster ftm on ftm.id = fc.fk_facilitytype
+  WHERE fc.id = :code
+`, {
+        replacements: { code: req.body.id },
+        type: sequelize.QueryTypes.SELECT
+      });
 
-    return Helper.response(true, "Facility Details", { facilities }, res, 200);
+
+
+    }
+    const province = await province_master.findOne({ where: { provinceid: facilities.fk_provinceid } })
+    const district = await district_master.findOne({ where: { districtid: facilities.fk_districtid } })
+    const wards = await ward_master.findOne({ where: { wardid: facilities.fk_wardid } })
+    const palika = await palika_master.findOne({
+      where: {
+        palikaid: facilities.fk_palikaid
+      },
+      logging: true
+    })   
+    const facility = {
+      provincename: province.province,
+      district_name: district.districtname,
+      wardname: `${wards?.wardname ? wards?.wardname : ''}`,
+      facility_code: req.body.facility_code ? req.body.facility_code : facilities.facilitycode,
+      full_location: `${province.province}, ${district.districtname} ${palika?.palikaname ? palika?.palikaname+' ,' : ''}${wards?.wardname ? 'Ward ' + wards?.wardname : ''}`,
+      ...facilities
+    }
+    return Helper.response(true, "Facility Details", { facility: facility }, res, 200);
   } catch (error) {
-    console.error("Error fetching facility authority level:", err);
+    console.error("Error fetching facility authority level:", error);
     return Helper.response(false, error.message, {}, res, 500);
+  }
+}
+
+
+exports.getHealthFacilityTypeData = async (req, res) => {
+  const { id, facility_image } = req.body;
+
+  let whereClause = {
+    fk_facilitytype: id,
+    isdeleted: 0
+  }
+  if (req.body?.authority_level) {
+    whereClause.authoritylevel = req.body?.authority_level
+    
+  }
+  if (req.body.province_id) {
+    whereClause.fk_provinceid = req.body.province_id
+  }
+  if (req.body.district_id) {
+    whereClause.fk_districtid = req.body.district_id
+  }
+  if (req.body.palika_id) {
+    whereClause.fk_palikaid = req.body.palika_id
+  }
+  try {
+    const facilitytypeData = await facility.findAll({
+      where: whereClause,
+      logging:console.log
+    })
+
+   
+    const data = facilitytypeData.map((r) => {
+
+     
+      return {
+        id: r.id,
+        facilityname: r.facilityname,
+        latitude: r.latitude || 0.00000,
+        longitude: r.longitude || 0.0000,
+        facility_image: facility_image
+      }
+    })
+    return Helper.response(true, "Facility Type Data", { data }, res, 200);
+  } catch (error) {
+    console.error("Error fetching facility type data:", error);
+    return Helper.response(false, "Error fetching facility type data", {}, res, 500);
   }
 }
 
