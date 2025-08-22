@@ -1,102 +1,129 @@
 const Helper = require("../../helper/helper");
 const district_master = require("../../models/districtmaster");
+const facility = require("../../models/facility");
+const facilitytypemaster = require("../../models/facilitytypemaster");
 const palika_master = require("../../models/pailikamaster");
 const province_master = require("../../models/provincemaster");
+const Role = require("../../models/role");
 const WardMaster = require("../../models/wardmaster");
-const { Op, Sequelize } = require('sequelize')
-
+const { Op, Sequelize } = require("sequelize");
 
 exports.provinces = async (req, res) => {
   try {
     const provinces = await province_master.findAll({
       where: {
-        isdeleted: 0
+        isdeleted: 0,
       },
-      order: [['province', 'ASC']]
+      order: [["province", "ASC"]],
     });
     if (!provinces || provinces.length === 0) {
       return Helper.response(false, "No provinces found", {}, res, 404);
     }
-    const data = await Promise.all(provinces.map((r) => {
-      return {
-        provinceid: r.provinceid,
-        province: r.province,
-        value: r.provinceid,
-        label: r.province
-
-      }
-    }))
-    return Helper.response(true, "Provinces fetched successfully", { data }, res, 200);
+    const data = await Promise.all(
+      provinces.map((r) => {
+        return {
+          provinceid: r.provinceid,
+          province: r.province,
+          value: r.provinceid,
+          label: r.province,
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "Provinces fetched successfully",
+      { data },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching provinces:", error);
     return Helper.response(false, "Error fetching provinces", {}, res, 500);
   }
-}
+};
 
 exports.district = async (req, res) => {
   try {
     const district = await district_master.findAll({
       where: {
-        isdeleted: 0
+        isdeleted: 0,
       },
-      order: [['districtname', 'ASC']]
+      order: [["districtname", "ASC"]],
     });
     if (!district || district.length === 0) {
       return Helper.response(false, "No provinces found", {}, res, 404);
     }
-    const data = await Promise.all(district.map(async (r) => {
-      const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
-      console.log(province, "f")
-      return {
-        districtid: r.districtid,
-        fk_provinceid: r.fk_provinceid,
-        district_name: r.districtname,
-        province_name: province.province,
-        value: r.districtid,
-        label: r.districtname
-
-      }
-    }))
-    return Helper.response(true, "District fetched successfully", { data }, res, 200);
+    const data = await Promise.all(
+      district.map(async (r) => {
+        const province = await province_master.findOne({
+          where: { provinceid: r.fk_provinceid },
+        });
+        console.log(province, "f");
+        return {
+          districtid: r.districtid,
+          fk_provinceid: r.fk_provinceid,
+          district_name: r.districtname,
+          province_name: province.province,
+          value: r.districtid,
+          label: r.districtname,
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "District fetched successfully",
+      { data },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching District:", error);
     return Helper.response(false, "Error fetching District", {}, res, 500);
   }
-}
+};
 
 exports.palikaList = async (req, res) => {
   try {
     const district = await palika_master.findAll({
       where: {
-        isdeleted: 0
+        isdeleted: 0,
       },
-      order: [['palikaname', 'ASC']]
+      order: [["palikaname", "ASC"]],
     });
     if (!district || district.length === 0) {
       return Helper.response(false, "No palika found", {}, res, 404);
     }
-    const data = await Promise.all(district.map(async (r) => {
-
-      const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
-      const district = await district_master.findOne({ where: { districtid: r.fk_districtid } })
-      return {
-        districtid: r.fk_districtid,
-        fk_provinceid: r.fk_provinceid,
-        palika_name: r.palikaname.trim(" "),
-        province_name: province?.province,
-        district_name: district.districtname,
-        value: r.id,
-        label: r.palikaname.trim(" ")
-
-      }
-    }))
-    return Helper.response(true, "Palika fetched successfully", { data }, res, 200);
+    const data = await Promise.all(
+      district.map(async (r) => {
+        const province = await province_master.findOne({
+          where: { provinceid: r.fk_provinceid },
+        });
+        const district = await district_master.findOne({
+          where: { districtid: r.fk_districtid },
+        });
+        return {
+          districtid: r.fk_districtid,
+          fk_provinceid: r.fk_provinceid,
+          palika_name: r.palikaname.trim(" "),
+          province_name: province?.province,
+          district_name: district.districtname,
+          value: r.id,
+          label: r.palikaname.trim(" "),
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "Palika fetched successfully",
+      { data },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching Palika:", error);
     return Helper.response(false, "Error fetching Palika", {}, res, 500);
   }
-}
-
+};
 
 // exports.wards = async (req, res) => {
 //     try {
@@ -159,12 +186,11 @@ exports.palikaList = async (req, res) => {
 
 exports.wards = async (req, res) => {
   try {
-
     const page = parseInt(req.body.page) || 1;
     const limit = parseInt(req.body.limit) || 50;
     const offset = (page - 1) * limit;
     let { searchValue } = req.body;
-    if (typeof searchValue == 'string') {
+    if (typeof searchValue == "string") {
       searchValue = searchValue.trim();
     }
 
@@ -173,30 +199,25 @@ exports.wards = async (req, res) => {
     let districtIds = [];
     let provinceIds = [];
 
-
     if (searchValue) {
       if (!isNaN(searchValue)) {
-
         const wardResult = await WardMaster.findAll({
           where: {
             isdeleted: 0,
             id: searchValue,
-
           },
-          attributes: ['id'],
+          attributes: ["id"],
         });
         console.log(wardResult, "wardResultsss");
 
         wardIds = wardResult.map((r) => r.id);
-      }
-
-      else {
+      } else {
         const wardResult = await WardMaster.findAll({
           where: {
             isdeleted: 0,
             wardname: { [Op.like]: `%${searchValue}%` },
           },
-          attributes: ['id'],
+          attributes: ["id"],
         });
         wardIds = wardResult.map((r) => r.id);
       }
@@ -205,7 +226,7 @@ exports.wards = async (req, res) => {
         where: {
           palikaname: { [Op.like]: `%${searchValue}%` },
         },
-        attributes: ['palikaid'],
+        attributes: ["palikaid"],
       });
       palikaIds = palikaResult.map((r) => r.palikaid);
 
@@ -213,7 +234,7 @@ exports.wards = async (req, res) => {
         where: {
           districtname: { [Op.like]: `%${searchValue}%` },
         },
-        attributes: ['districtid'],
+        attributes: ["districtid"],
       });
       districtIds = districtResult.map((r) => r.districtid);
 
@@ -221,7 +242,7 @@ exports.wards = async (req, res) => {
         where: {
           province: { [Op.like]: `%${searchValue}%` },
         },
-        attributes: ['provinceid'],
+        attributes: ["provinceid"],
       });
       provinceIds = provinceResult.map((r) => r.provinceid);
 
@@ -235,73 +256,78 @@ exports.wards = async (req, res) => {
             { fk_provinceid: { [Op.in]: provinceIds } },
           ],
         },
-        order: [['wardname', 'ASC']],
+        order: [["wardname", "ASC"]],
         limit,
         offset,
       });
-
-    }
-    else {
+    } else {
       var { count, rows } = await WardMaster.findAndCountAll({
         where: { isdeleted: 0 },
-        order: [['wardname', 'ASC']],
+        order: [["wardname", "ASC"]],
         limit,
-        offset
+        offset,
       });
 
       if (!rows || rows.length === 0) {
         return Helper.response(false, "No ward found", {}, res, 404);
       }
-      console.log(count, rows, "count112,rows121")
-
+      console.log(count, rows, "count112,rows121");
     }
-
 
     if (!rows || rows.length === 0) {
       return Helper.response(false, "No ward found", {}, res, 404);
     }
 
+    const data = await Promise.all(
+      rows.map(async (r) => {
+        const province = await province_master.findOne({
+          where: { provinceid: r.fk_provinceid },
+        });
+        const district = await district_master.findOne({
+          where: { districtid: r.fk_districtid },
+        });
+        const palika = await palika_master.findOne({
+          where: { palikaid: r.fk_palikaid },
+        });
 
+        return {
+          districtid: r.fk_districtid,
+          fk_provinceid: r.fk_provinceid,
+          province_name: province?.province,
+          district_name: district?.districtname,
+          palika_name: palika?.palikaname,
+          fk_palikaid: r.fk_palikaid,
+          ward_name: `Ward ${r.wardname.trim()}`,
+          value: r.id,
+          label: r.wardname.trim(),
+        };
+      })
+    );
 
-    const data = await Promise.all(rows.map(async (r) => {
-      const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } });
-      const district = await district_master.findOne({ where: { districtid: r.fk_districtid } });
-      const palika = await palika_master.findOne({ where: { palikaid: r.fk_palikaid } });
-
-      return {
-        districtid: r.fk_districtid,
-        fk_provinceid: r.fk_provinceid,
-        province_name: province?.province,
-        district_name: district?.districtname,
-        palika_name: palika?.palikaname,
-        fk_palikaid: r.fk_palikaid,
-        ward_name: `Ward ${r.wardname.trim()}`,
-        value: r.id,
-        label: r.wardname.trim(),
-      };
-    }));
-
-    return Helper.response(true, "Ward fetched successfully", {
-      data,
-      pagination: {
-        totalRecords: count,
-        totalPages: Math.ceil(count / limit),
-        currentPage: page,
-        perPage: limit,
+    return Helper.response(
+      true,
+      "Ward fetched successfully",
+      {
+        data,
+        pagination: {
+          totalRecords: count,
+          totalPages: Math.ceil(count / limit),
+          currentPage: page,
+          perPage: limit,
+        },
       },
-    }, res, 200);
+      res,
+      200
+    );
   } catch (error) {
     console.error(error);
     return Helper.response(false, "An error occurred", {}, res, 500);
   }
-
 };
-
 
 exports.districtDD = async (req, res) => {
   try {
-
-    const { province_id } = req.body
+    let { province_id } = req.body;
     if (!province_id) {
       return Helper.response(false, "Province Id Is Required", {}, res, 404);
     }
@@ -309,78 +335,111 @@ exports.districtDD = async (req, res) => {
     const district = await district_master.findAll({
       where: {
         isdeleted: 0,
-        fk_provinceid: province_id
+        // [Op.in]:{
+        //   fk_provinceid:province_id
+        // }
+        fk_provinceid: province_id,
       },
-      order: [['districtname', 'ASC']]
+      order: [["districtname", "ASC"]],
     });
     if (!district || district.length === 0) {
       return Helper.response(false, "No provinces found", {}, res, 404);
     }
-    const data = await Promise.all(district.map(async (r) => {
-      const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
-      console.log(province, "f")
-      return {
-        districtid: r.districtid,
-        fk_provinceid: r.fk_provinceid,
-        district_name: r.districtname,
-        province_name: province.province,
-        value: r.districtid,
-        label: r.districtname
-
-      }
-    }))
-    return Helper.response(true, "District fetched successfully", { data }, res, 200);
+    const data = await Promise.all(
+      district.map(async (r) => {
+        const province = await province_master.findOne({
+          where: { provinceid: r.fk_provinceid },
+        });
+        console.log(province, "f");
+        return {
+          districtid: r.districtid,
+          fk_provinceid: r.fk_provinceid,
+          district_name: r.districtname,
+          province_name: province.province,
+          value: r.districtid,
+          label: r.districtname,
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "District fetched successfully",
+      { data },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching District:", error);
     return Helper.response(false, "Error fetching District", {}, res, 500);
   }
-}
+};
 
 exports.palikaListDD = async (req, res) => {
   try {
-    const { province_id, district_id } = req.body
+    const { province_id, district_id } = req.body;
     if (!province_id || !district_id) {
-      return Helper.response(false, "Province Id , District Id is Required !", {}, res, 404);
+      return Helper.response(
+        false,
+        "Province Id , District Id is Required !",
+        {},
+        res,
+        404
+      );
     }
     const district = await palika_master.findAll({
       where: {
         isdeleted: 0,
         fk_provinceid: province_id,
-        fk_districtid: district_id
+        fk_districtid: district_id,
       },
-      order: [['palikaname', 'ASC']]
+      order: [["palikaname", "ASC"]],
     });
     if (!district || district.length === 0) {
       return Helper.response(false, "No palika found", {}, res, 404);
     }
-    const data = await Promise.all(district.map(async (r) => {
-
-      const province = await province_master.findOne({ where: { provinceid: r.fk_provinceid } })
-      const district = await district_master.findOne({ where: { districtid: r.fk_districtid } })
-      return {
-        districtid: r.fk_districtid,
-        fk_provinceid: r.fk_provinceid,
-        palika_name: r.palikaname.trim(" "),
-        province_name: province?.province,
-        district_name: district.districtname,
-        value: r.id,
-        label: r.palikaname.trim(" "),
-        palikaid: r?.palikaid
-
-      }
-    }))
-    return Helper.response(true, "Palika fetched successfully", { data }, res, 200);
+    const data = await Promise.all(
+      district.map(async (r) => {
+        const province = await province_master.findOne({
+          where: { provinceid: r.fk_provinceid },
+        });
+        const district = await district_master.findOne({
+          where: { districtid: r.fk_districtid },
+        });
+        return {
+          districtid: r.fk_districtid,
+          fk_provinceid: r.fk_provinceid,
+          palika_name: r.palikaname.trim(" "),
+          province_name: province?.province,
+          district_name: district.districtname,
+          value: r.id,
+          label: r.palikaname.trim(" "),
+          palikaid: r?.palikaid,
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "Palika fetched successfully",
+      { data },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching Palika:", error);
     return Helper.response(false, "Error fetching Palika", {}, res, 500);
   }
-}
+};
 exports.wardDD = async (req, res) => {
   try {
-
-    const { province_id, district_id, palika_id } = req.body
+    const { province_id, district_id, palika_id } = req.body;
     if (!province_id || !district_id || !palika_id) {
-      return Helper.response(false, "Province Id , District Id , palika Id is Required !", {}, res, 404);
+      return Helper.response(
+        false,
+        "Province Id , District Id , palika Id is Required !",
+        {},
+        res,
+        404
+      );
     }
 
     const { count, rows } = await WardMaster.findAndCountAll({
@@ -388,27 +447,83 @@ exports.wardDD = async (req, res) => {
         isdeleted: 0,
         fk_provinceid: province_id,
         fk_districtid: district_id,
-        fk_palikaid: palika_id
+        fk_palikaid: palika_id,
       },
-      order: [['wardname', 'ASC']],
+      order: [["wardname", "ASC"]],
     });
 
     if (!rows || rows.length == 0) {
       return Helper.response(false, "No ward found", {}, res, 404);
     }
 
-    const data = await Promise.all(rows.map(async (r) => {
+    const data = await Promise.all(
+      rows.map(async (r) => {
+        return {
+          value: r.id,
+          label: `Ward ${r.wardname.trim()}`,
+        };
+      })
+    );
 
-      return {
-        value: r.id,
-        label: `Ward ${r.wardname.trim()}`
-      }
-    }))
+    return Helper.response(
+      true,
+      "Ward fetched successfully",
+      {
+        data,
+      },
+      res,
+      200
+    );
+  } catch (error) {
+    console.error("Error fetching wards:", error);
+    return Helper.response(false, "Error fetching Ward", {}, res, 500);
+  }
+};
+exports.facilitytypebyId = async (req, res) => {
+  try {
+    const { province_id, district_id, palika_id } = req.body;
+    if (!province_id || !district_id || !palika_id) {
+      return Helper.response(
+        false,
+        "Province Id , District Id , palika Id is Required !",
+        {},
+        res,
+        404
+      );
+    }
 
-    return Helper.response(true, "Ward fetched successfully", {
-      data,
-    }, res, 200);
+    const { count, rows } = await WardMaster.findAndCountAll({
+      where: {
+        isdeleted: 0,
+        fk_provinceid: province_id,
+        fk_districtid: district_id,
+        fk_palikaid: palika_id,
+      },
+      order: [["wardname", "ASC"]],
+    });
 
+    if (!rows || rows.length == 0) {
+      return Helper.response(false, "No ward found", {}, res, 404);
+    }
+
+    const data = await Promise.all(
+      rows.map(async (r) => {
+        return {
+          value: r.id,
+          label: `Ward ${r.wardname.trim()}`,
+        };
+      })
+    );
+
+    return Helper.response(
+      true,
+      "Ward fetched successfully",
+      {
+        data,
+      },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching wards:", error);
     return Helper.response(false, "Error fetching Ward", {}, res, 500);
@@ -417,26 +532,132 @@ exports.wardDD = async (req, res) => {
 
 exports.AlldistrictDD = async (req, res) => {
   try {
-    
     const district = await district_master.findAll({
       where: {
         isdeleted: 0,
       },
-      order: [['districtname', 'ASC']]
+      order: [["districtname", "ASC"]],
     });
     if (!district || district.length === 0) {
       return Helper.response(false, "No provinces found", {}, res, 404);
     }
-    const data = await Promise.all(district.map(async (r) => {
-      return {
-        districtid: r.districtid,
-        value: r.districtid,
-        label: r.districtname
-      }
-    }))
-    return Helper.response(true, "District fetched successfully", { data }, res, 200);
+    const data = await Promise.all(
+      district.map(async (r) => {
+        return {
+          districtid: r.districtid,
+          value: r.districtid,
+          label: r.districtname,
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "District fetched successfully",
+      { data },
+      res,
+      200
+    );
   } catch (error) {
     console.error("Error fetching District:", error);
     return Helper.response(false, "Error fetching District", {}, res, 500);
   }
-}
+};
+exports.facilitytype = async (req, res) => {
+  try {
+    const facilitytype = await facilitytypemaster.findAll({
+      where: {
+        isdeleted: 0,
+        id: { [Op.notIn]: [30] }
+      },
+      order: [["facilitytype", "ASC"]],
+    });
+    if (!facilitytype || facilitytype.length === 0) {
+      return Helper.response(false, "No Facility found", {}, res, 404);
+    }
+    const data = await Promise.all(
+      facilitytype.map(async (r) => {
+        return {
+          value: r?.id,
+          label: r?.facilitytype,
+        };
+      })
+    );
+    return Helper.response(
+      true,
+      "facility fetched successfully",
+      { data },
+      res,
+      200
+    );
+  } catch (error) {
+    console.error("Error fetching District:", error);
+    return Helper.response(false, "Error fetching District", {}, res, 500);
+  }
+};
+
+exports.facilityDD = async (req, res) => {
+  try {
+    const { province_id, district_id, palika_id, ward_id } = req.body;
+    const whereCondition = {
+      isdeleted: 0,
+      id: { [Op.notIn]: [30] }
+    };
+
+    if (province_id) whereCondition.fk_provinceid = province_id;
+    if (district_id) whereCondition.fk_districtid = district_id;
+    if (palika_id) whereCondition.fk_palikaid = palika_id;
+    if (ward_id) whereCondition.fk_wardid = ward_id;
+
+    const facilitydata = await facility.findAll({
+      where: whereCondition,
+      order: [["facilityname", "ASC"]],
+    });
+
+    if (!facilitydata || facilitydata.length === 0) {
+      return Helper.response(false, "No Facility found", {}, res, 404);
+    }
+
+    const data = facilitydata.map((r) => ({
+      value: r?.id,
+      label: r?.facilityname,
+    }));
+
+    return Helper.response(
+      true,
+      "Facility fetched successfully",
+      { data },
+      res,
+      200
+    );
+  } catch (error) {
+    console.error("Error fetching Facility:", error);
+    return Helper.response(false, "Error fetching Facility", {}, res, 500);
+  }
+};
+
+exports.roledd = async (req, res) => {
+  try {
+    const role = await Role.findAll({
+      order: [["name", "ASC"]],
+    });
+    if (!role || role.length === 0) {
+      return Helper.response(false, "No Role found", {}, res, 404);
+    }
+    const data = role.map((r) => ({
+      id: r?.id,
+      value: r?.id,
+      label: r?.name,
+      Fk_Usertype: r?.nickname
+    }));
+    return Helper.response(
+      true,
+      "Role fetched successfully",
+      { data },
+      res,
+      200
+    );
+  } catch (error) {
+    console.error("Error fetching Role:", error);
+    return Helper.response(false, error?.message, {}, res, 500);
+  }
+};

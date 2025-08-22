@@ -110,6 +110,10 @@ const facility = sequelize.define('facility', {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
+    },
+    f_services:{
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: 'facility',

@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const fs = require('fs');
 const path = require('path');
 const db = require('../connection/connection');
-
+const CryptoJS = require("crypto-js");
 const Helper = {};
 
 Helper.response = (status, message, data = [], res, statusCode) => {
@@ -59,8 +59,7 @@ Helper.getFacility = async (facility_type_id) => {
 
 Helper.getProvincesFacilityCounts = async (province_id) => {
     try {
-        const query =
-            `
+        const query = `
          SELECT 
         b.id,
         b.facilitytype AS facility_type,
@@ -76,12 +75,33 @@ Helper.getProvincesFacilityCounts = async (province_id) => {
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
+          const query1 = `
+         SELECT 
+        b.id,
+        b.facilitytype AS facility_type,
+        b.id AS value,
+        b.facilitytype AS label,
+        COUNT(a.province_id) AS count,
+        b.image AS facility_image,
+        b.color_code
+    FROM vaccine_warehouse AS a
+    JOIN facilitytypemaster AS b 
+        ON a.facilitytype_id = b.id
+    WHERE a.province_id = :province_id and b.isdeleted = 0
+    GROUP BY b.facilitytype, b.id, b.image,b.color_code
+    ORDER BY b.facilitytype ASC;
+        `
 
         const result = await db.query(query, {
             replacements: { province_id },
             type: db.QueryTypes.SELECT
         });
-        return result;
+            const result1 = await db.query(query1, {
+            replacements: { province_id },
+            type: db.QueryTypes.SELECT
+        });
+        return [...result, ...result1];
+        // return result;
     } catch (err) {
         console.error("Error fetching facility counts:", err);
         return [];
@@ -108,11 +128,33 @@ Helper.getProvincesFacilityCountsAuthorityLevel = async (province_id, authority_
     ORDER BY b.facilitytype ASC;
         `
 
+          const query1 = `
+         SELECT 
+        b.id,
+        b.facilitytype AS facility_type,
+        b.id AS value,
+        b.facilitytype AS label,
+        COUNT(a.province_id) AS count,
+        b.image AS facility_image,
+        b.color_code
+    FROM vaccine_warehouse AS a
+    JOIN facilitytypemaster AS b 
+        ON a.facilitytype_id = b.id
+    WHERE a.province_id = :province_id and b.isdeleted = 0
+    GROUP BY b.facilitytype, b.id, b.image,b.color_code
+    ORDER BY b.facilitytype ASC;
+        `
+          const result1 = await db.query(query1, {
+            replacements: { province_id },
+            type: db.QueryTypes.SELECT
+        });
+
         const result = await db.query(query, {
             replacements: { province_id, authority_level },
             type: db.QueryTypes.SELECT
         });
-        return result;
+       return [...result, ...result1];
+        // return result;
     } catch (err) {
         console.error("Error fetching facility counts:", err);
         return [];
@@ -140,12 +182,34 @@ Helper.getDistrictFacilityCounts = async (district_id) => {
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
+  const query1 = `
+         SELECT 
+        b.id,
+        b.facilitytype AS facility_type,
+        b.id AS value,
+        b.facilitytype AS label,
+        COUNT(a.district_id) AS count,
+        b.image AS facility_image,
+        b.color_code
+    FROM vaccine_warehouse AS a
+    JOIN facilitytypemaster AS b 
+        ON a.facilitytype_id = b.id
+    WHERE a.district_id = :district_id and b.isdeleted = 0
+    GROUP BY b.facilitytype, b.id, b.image,b.color_code
+    ORDER BY b.facilitytype ASC;
+        `
+          const result1 = await db.query(query1, {
+            replacements: { district_id },
+            type: db.QueryTypes.SELECT
+        });
 
         const result = await db.query(query, {
             replacements: { district_id },
             type: db.QueryTypes.SELECT
         });
-        return result;
+        console.log(result,result1)
+        return [...result, ...result1];
+        // return result;
     } catch (err) {
         console.error("Error fetching facility counts:", err);
         return [];
@@ -171,12 +235,33 @@ Helper.getDistrictFacilityCountsAuthorityLevel = async (district_id, authority_l
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
+  const query1 = `
+         SELECT 
+        b.id,
+        b.facilitytype AS facility_type,
+        b.id AS value,
+        b.facilitytype AS label,
+        COUNT(a.district_id) AS count,
+        b.image AS facility_image,
+        b.color_code
+    FROM vaccine_warehouse AS a
+    JOIN facilitytypemaster AS b 
+        ON a.facilitytype_id = b.id
+    WHERE a.district_id = :district_id and b.isdeleted = 0
+    GROUP BY b.facilitytype, b.id, b.image,b.color_code
+    ORDER BY b.facilitytype ASC;
+        `
+          const result1 = await db.query(query1, {
+            replacements: { district_id },
+            type: db.QueryTypes.SELECT
+        });
 
         const result = await db.query(query, {
             replacements: { district_id, authority_level },
             type: db.QueryTypes.SELECT
         });
-        return result;
+         return [...result, ...result1];
+        // return result;
     } catch (err) {
         console.error("Error fetching facility counts:", err);
         return [];
@@ -203,12 +288,33 @@ Helper.getPalikaFacilityCounts = async (palika_id) => {
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
+          const query1 = `
+         SELECT 
+        b.id,
+        b.facilitytype AS facility_type,
+        b.id AS value,
+        b.facilitytype AS label,
+        COUNT(a.palika_id) AS count,
+        b.image AS facility_image,
+        b.color_code
+    FROM vaccine_warehouse AS a
+    JOIN facilitytypemaster AS b 
+        ON a.facilitytype_id = b.id
+    WHERE a.palika_id = :palika_id and b.isdeleted = 0
+    GROUP BY b.facilitytype, b.id, b.image,b.color_code
+    ORDER BY b.facilitytype ASC;
+        `
+          const result1 = await db.query(query1, {
+            replacements: { palika_id },
+            type: db.QueryTypes.SELECT
+        });
 
         const result = await db.query(query, {
             replacements: { palika_id: palika_id },
             type: db.QueryTypes.SELECT
         });
-        return result;
+         return [...result, ...result1];
+        // return result;
     } catch (err) {
         console.error("Error fetching facility counts:", err);
         return [];
@@ -235,12 +341,32 @@ Helper.getPalikaFacilityCountsAuthorityLevel = async (palika_id, authority_level
     GROUP BY b.facilitytype, b.id, b.image,b.color_code
     ORDER BY b.facilitytype ASC;
         `
+         const query1 = `
+         SELECT 
+        b.id,
+        b.facilitytype AS facility_type,
+        b.id AS value,
+        b.facilitytype AS label,
+        COUNT(a.palika_id) AS count,
+        b.image AS facility_image,
+        b.color_code
+    FROM vaccine_warehouse AS a
+    JOIN facilitytypemaster AS b 
+        ON a.facilitytype_id = b.id
+    WHERE a.palika_id = :palika_id and b.isdeleted = 0
+    GROUP BY b.facilitytype, b.id, b.image,b.color_code
+    ORDER BY b.facilitytype ASC;
+        `
+           const result1 = await db.query(query1, {
+            replacements: { palika_id },
+            type: db.QueryTypes.SELECT
+        });
 
         const result = await db.query(query, {
             replacements: { palika_id: palika_id, authority_level: authority_level },
             type: db.QueryTypes.SELECT
         });
-        return result;
+         return [...result, ...result1];
     } catch (err) {
         console.error("Error fetching facility counts:", err);
         return [];
@@ -288,7 +414,7 @@ Helper.getFacilityProvince = async (facility_type_id, province_id) => {
 Helper.getHealthWorkerCategory = async () => {
     try {
         const query = `
-      SELECT 
+       SELECT 
     hwc.id AS cat_id,
     hwc.name AS title,
     COUNT(hwd.id) AS count,
@@ -300,6 +426,8 @@ JOIN districtmaster dm
     ON ld.code = dm.districtid::text
 JOIN health_worker_category hwc 
     ON hwc.id = hwd.category_id
+JOIN facility f on hwd.fk_facilitycode = f.fk_facilitycode
+
 GROUP BY hwc.id, hwc.name,icon
 ORDER BY hwc.id;
 
@@ -323,6 +451,7 @@ JOIN location_district ld on ld.code = dm.districtid::text
 JOIN health_worker_data hwd on hwd.employee_district_id = ld.id
 JOIN health_worker_category hwc on hwd.category_id = hwc.id
 JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
+JOIN facility f on hwd.fk_facilitycode = f.fk_facilitycode
 WHERE dm.fk_provinceid = :province_id and hwc.id = :category_id
 GROUP BY hwc.name,hwc.icon,cat_id
 ORDER BY title;
@@ -347,6 +476,7 @@ JOIN location_district ld on ld.code = dm.districtid::text
 JOIN health_worker_data hwd on hwd.employee_district_id = ld.id
 JOIN health_worker_category hwc on hwd.category_id = hwc.id
 JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
+JOIN facility f on hwd.fk_facilitycode = f.fk_facilitycode
 WHERE dm.districtid =:district_id and hwc.id = :category_id
 GROUP BY hwc.name,hwc.icon,cat_id
 ORDER BY title;
@@ -374,6 +504,7 @@ JOIN health_worker_category hwc on hwd.category_id = hwc.id
 JOIN provincemaster pm on pm.provinceid = dm.fk_provinceid
 JOIN location_municipality lm on lm.id = hwd.employee_municipality_id
 JOIN palikamaster pms on lm.code = pms.palikaid::text
+JOIN facility f on hwd.fk_facilitycode = f.fk_facilitycode
 WHERE hwc.id = :category_id and pms.palikaid = :palika_id
 GROUP BY hwc.name,hwc.icon,cat_id
 ORDER BY title;
@@ -735,7 +866,20 @@ ORDER BY wardmaster.wardname;
 }
 
 
+Helper.capitalizeFirst = (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
+Helper.encryptPassword = (password) => {
+  var pass = CryptoJS.AES.encrypt(password, process.env.SECRET_KEY).toString();
+  return pass;
+};
+Helper.decryptPassword = (password) => {
+  var bytes = CryptoJS.AES.decrypt(password, process.env.SECRET_KEY);
+  var originalPassword = bytes.toString(CryptoJS.enc.Utf8);
+  return originalPassword;
+};
 
 module.exports = Helper;
 
